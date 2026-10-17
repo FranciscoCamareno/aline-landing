@@ -1,32 +1,91 @@
 ---
-import sticker from "../assets/landing/logo/aline-sticker.svg";
-import stickerPeeling from "../assets/landing/logo/aline-sticker-peeling.svg";
-
+/*
+ * Sticker despegable, reutilizable (el logo del nav y la "a" del footer usan este mismo código).
+ *
+ * Pegado vive dentro de su contenedor [data-sticker-slot] y vuelve al centro de su
+ * [data-sticker-die]. Despegado pasa a position: fixed, así que ningún ancestro suyo puede llevar
+ * transform, filter ni rotate. La posición y el tamaño pegado los pone el componente padre con `class`.
+ */
 interface Props {
+  /** aria-label traducido: explica el arrastre, las flechas y cómo devolverlo. */
   label: string;
+  /** Imagen en reposo y con la esquina levantada (mientras se arrastra). */
+  rest: string;
+  peel: string;
+  /** Tamaño intrínseco de las imágenes (para reservar espacio). */
+  width: number;
+  height: number;
+  /** Clave de localStorage para recordar dónde se dejó. */
+  storageKey: string;
+  /** Giro en reposo dentro de su ranura, en grados. */
+  rotate?: number;
+  /** Margen transparente de la imagen alrededor del sticker visible, como fracción del ancho. */
+  insetRatio?: number;
+  /** Qué hace un clic sin arrastrar estando pegado. */
+  click?: "top" | "none";
+  /** Sombras (drop-shadow, siguen la silueta troquelada) en reposo y al levantarlo. */
+  shadow?: string;
+  shadowLift?: string;
+  class?: string;
 }
 
-const { label } = Astro.props;
+const {
+  label,
+  rest,
+  peel,
+  width,
+  height,
+  storageKey,
+  rotate = 0,
+  insetRatio = 0,
+  click = "none",
+  shadow = "drop-shadow(0 3px 0 rgba(38, 33, 24, 0.14))",
+  shadowLift = "drop-shadow(0 16px 14px rgba(38, 33, 24, 0.22)) drop-shadow(0 2px 0 rgba(38, 33, 24, 0.1))",
+  class: className,
+} = Astro.props;
+
+const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticker-shadow-lift: ${shadowLift}`;
 ---
 
-<button class="sticker" type="button" aria-label={label} data-sticker>
-  <img class="sticker__img sticker__img--rest" src={sticker.src} width="140" height="60" alt="" draggable="false" />
-  <img
-    class="sticker__img sticker__img--peel"
-    src={stickerPeeling.src}
-    width="140"
-    height="60"
-    alt=""
-    draggable="false"
-  />
+<button
+  class:list={["sticker", className]}
+  type="button"
+  aria-label={label}
+  style={vars}
+  data-sticker
+  data-key={storageKey}
+  data-rot={rotate}
+  data-inset={insetRatio}
+  data-click={click}
+>
+  <img class="sticker__img sticker__img--rest" src={rest} width={width} height={height} alt="" draggable="false" />
+  <img class="sticker__img sticker__img--peel" src={peel} width={width} height={height} alt="" draggable="false" />
 </button>
+<!-- Aplica la posición guardada antes del primer pintado: sin esto, el sticker (y el aviso del nav)
+     se verían un instante en su ranura hasta que carga la isla -->
+<script is:inline>
+  (function () {
+    const el = document.currentScript.previousElementSibling;
+    try {
+      const s = JSON.parse(localStorage.getItem(el.dataset.key) || "null");
+      if (!s || !isFinite(s.x) || !isFinite(s.y)) return;
+      const inset = el.offsetWidth * (parseFloat(el.dataset.inset) || 0);
+      const maxX = document.documentElement.clientWidth - el.offsetWidth + inset - 8;
+      const maxY = window.innerHeight - el.offsetHeight + inset - 8;
+      if (s.x < 8 - inset || s.y < 8 - inset || s.x > maxX || s.y > maxY) return;
+      const slot = el.closest("[data-sticker-slot]");
+      if (slot) slot.classList.add("is-peeled");
+      el.classList.add("is-loose");
+      el.style.left = s.x + "px";
+      el.style.top = s.y + "px";
+      el.style.transform = "rotate(" + (isFinite(s.rot) ? s.rot : 0) + "deg) scale(1)";
+    } catch {
+      /* sin almacenamiento: se queda en su ranura */
+    }
+  })();
+</script>
 
 <script>
-  const STORE_KEY = "aline.sticker";
-  /** Margen transparente del SVG alrededor del sticker visible (4px de 140; escala con el logo). */
-  const INSET_RATIO = 4 / 140;
-  /** Giro del sticker pegado en su troquel. */
-  const DOCK_ROT = -2;
   const EDGE = 8;
   const DRAG_THRESHOLD = 5;
   const RETURN_MS = 400;
@@ -53,13 +112,18 @@ const { label } = Astro.props;
   };
 
   const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+  const randomTilt = () => Math.round((Math.random() * 16 - 8) * 10) / 10;
 
   function init(el: HTMLButtonElement) {
     const slot = el.closest<HTMLElement>("[data-sticker-slot]");
     if (!slot) return;
-    // El troquel de la hoja de respaldo: a su centro vuelve el sticker
+    const STORE_KEY = el.dataset.key ?? "aline.sticker";
+    const DOCK_ROT = Number(el.dataset.rot) || 0;
+    const INSET_RATIO = Number(el.dataset.inset) || 0;
+    const clickAction = el.dataset.click ?? "none";
+    // A dónde vuelve: el centro de su ranura (el troquel en el nav, la marca en el footer)
     const die = slot.querySelector<HTMLElement>("[data-sticker-die]") ?? slot;
-    const pencilLink = slot.querySelector<HTMLAnchorElement>("[data-sticker-under]");
+    const underLink = slot.querySelector<HTMLAnchorElement>("[data-sticker-under]");
 
     let loose = false;
     let x = 0;
@@ -81,7 +145,6 @@ const { label } = Astro.props;
     let raf = 0;
 
     const size = () => ({ w: el.offsetWidth, h: el.offsetHeight });
-
     const inset = () => el.offsetWidth * INSET_RATIO;
 
     function bounds() {
@@ -108,14 +171,14 @@ const { label } = Astro.props;
     function setLoose(value: boolean) {
       loose = value;
       el.classList.toggle("is-loose", value);
-      if (pencilLink) pencilLink.tabIndex = value ? 0 : -1;
+      if (underLink) underLink.tabIndex = value ? 0 : -1;
       if (!value) {
         el.style.left = "";
         el.style.top = "";
       }
     }
 
-    /** El aviso se oculta al despegarlo y vuelve en la siguiente carga si el sticker está en su ranura. */
+    /** Oculta el aviso de su ranura (si tiene); vuelve en la siguiente carga si está pegado. */
     function markPeeled() {
       slot!.classList.add("is-peeled");
     }
@@ -148,7 +211,7 @@ const { label } = Astro.props;
       scale = 1;
       tilt = 0;
       tiltTarget = 0;
-      rot = Math.round((Math.random() * 16 - 8) * 10) / 10;
+      rot = randomTilt();
       el.classList.remove("is-lifted");
       el.style.transition = "";
       el.classList.add("is-settling");
@@ -159,7 +222,7 @@ const { label } = Astro.props;
     function stickBack() {
       if (!loose || returning) return;
       returning = true;
-      // Centro del troquel (el giro no mueve el centro del rectángulo)
+      // Centro de la ranura (el giro no mueve el centro del rectángulo)
       const r = die.getBoundingClientRect();
       const { w, h } = size();
       x = r.left + r.width / 2 - w / 2;
@@ -234,7 +297,7 @@ const { label } = Astro.props;
         suppressClick = false;
         return;
       }
-      if (!loose) {
+      if (!loose && clickAction === "top") {
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
       }
@@ -262,7 +325,7 @@ const { label } = Astro.props;
       e.preventDefault();
       if (!loose) {
         peel();
-        rot = Math.round((Math.random() * 16 - 8) * 10) / 10;
+        rot = randomTilt();
       }
       el.style.transition = "";
       el.classList.add("is-settling");
@@ -309,14 +372,10 @@ const { label } = Astro.props;
 </script>
 
 <style>
-  /* Pegado: centrado en el troquel de la hoja de respaldo (--k escala el logo en pantallas estrechas) */
+  /* La posición y el tamaño pegado los pone el padre con `class` */
   .sticker {
     position: absolute;
-    left: calc(12px * var(--k, 1));
-    top: calc(10px * var(--k, 1));
     z-index: 2;
-    width: calc(140px * var(--k, 1));
-    height: calc(60px * var(--k, 1));
     padding: 0;
     border: 0;
     border-radius: var(--radius-md);
@@ -326,7 +385,7 @@ const { label } = Astro.props;
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
-    transform: rotate(-2deg);
+    transform: rotate(var(--sticker-rot, 0deg));
     transform-origin: 50% 50%;
   }
 
@@ -355,7 +414,7 @@ const { label } = Astro.props;
   }
 
   .sticker:focus-visible {
-    outline: 2px solid var(--focus);
+    outline: 2px solid var(--sticker-focus, var(--focus));
     outline-offset: 1px;
   }
 
@@ -366,9 +425,8 @@ const { label } = Astro.props;
     height: 100%;
     max-width: none;
     pointer-events: none;
-    /* Equivalentes en drop-shadow de --shadow-sticker y --shadow-lifted,
-       para que la sombra siga la esquina doblada */
-    filter: drop-shadow(0 3px 0 rgba(38, 33, 24, 0.14));
+    /* drop-shadow y no box-shadow: la sombra sigue la silueta troquelada */
+    filter: var(--sticker-shadow);
     transition: filter 200ms var(--ease-out);
   }
 
@@ -382,7 +440,7 @@ const { label } = Astro.props;
 
   .sticker.is-lifted .sticker__img--peel {
     visibility: visible;
-    filter: drop-shadow(0 16px 14px rgba(38, 33, 24, 0.22)) drop-shadow(0 2px 0 rgba(38, 33, 24, 0.1));
+    filter: var(--sticker-shadow-lift);
   }
 
   @media (prefers-reduced-motion: reduce) {

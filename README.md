@@ -29,7 +29,8 @@ pnpm aplica una edad mínima de publicación a las dependencias: si un `pnpm add
 | Qué | Dónde |
 |---|---|
 | URLs de "Open aline" e "Install" | `src/config/site.ts` (`APP_URL`, `INSTALL_URL`) |
-| URLs del footer (Novedades, Privacidad) | `src/config/site.ts` (`CHANGELOG_URL`, `PRIVACY_URL`) |
+| URLs del footer y redes | `src/config/site.ts` (`ABOUT_URL`, `TERMS_URL`, `PRIVACY_URL`, `INSTAGRAM_URL`, `LINKEDIN_URL`, `GITHUB_URL`) |
+| Hoja de libreta del nav: cuándo vuelve | `src/config/site.ts` → `NAV_PAPER_RETURN` (`"top"` o `"scrollUp"`) |
 | Tiempos de la animación del hero | `src/config/hero.ts` → `timings` |
 | Punta y tamaño del lápiz del hero | `src/config/hero.ts` → `pencilTip` (px de `aline-lapiz.webp`, 1674×1342) y `pencilWidthEm` |
 | Posición y giro de la hoja pintada | `src/config/hero.ts` → `sheet`, `sheetMaxPx` |
@@ -59,9 +60,11 @@ El trazo lo dicta el scroll en todo momento: si el scroll se para, el lápiz se 
 
 - `src/components/Hero.astro`: el contenido va encima de la hoja pintada del fondo, girado con ella y con tamaños en `cqi` relativos a la hoja. Un lápiz escribe la palabra, la resalta y la tacha. Con `prefers-reduced-motion` no hay lápiz y la palabra cambia cada 2.6 s. La versión con la hoja en HTML quedó en el tag `opcion-b`.
 - `src/components/ProductPeek.astro`: vista previa de la app en HTML (`role="img"`). Por debajo de 960px hace scroll horizontal.
-- `src/components/Features.astro`, `Facts.astro`, `FinalCta.astro`, `Footer.astro`: el resto de secciones.
+- `src/components/Features.astro`, `Facts.astro`, `FinalCta.astro`: el resto de secciones.
+- `src/components/Footer.astro`: footer oscuro (tokens `--dark-*`), con el logotipo gigante cortado por el borde y el sticker de la "a" despegable.
+- `src/components/Sticker.astro`: sticker despegable reutilizable (lo usan el logo del nav y la "a" del footer). Opciones: imágenes en reposo y al arrastrar, giro, clave de `localStorage`, margen transparente y acción al hacer clic. Vuelve al centro del `[data-sticker-die]` de su `[data-sticker-slot]`; ningún ancestro suyo puede llevar `transform`, `filter` ni `rotate`.
 - `src/components/DrawingPad.astro`: bloc de dibujo con dos canvas (resaltador con `multiply` debajo, lápiz encima) y trazos guardados como datos. `perfect-freehand` se carga al acercarse. Con puntero grueso arranca bloqueado ("Toca para dibujar").
 - `src/components/PencilThread.astro`: el hilo de lápiz. La ruta se calcula en JS a partir de las anclas; GSAP (ScrollTrigger + DrawSVG) se carga al acercarse. No se muestra por debajo de 960px.
-- `src/components/DrawnButton.astro`, `Nav.astro`, `Sticker.astro`, `LangSwitch.astro`: componentes de la Fase 1.
+- `src/components/DrawnButton.astro`, `Nav.astro`, `LangSwitch.astro`: botón dibujado, nav flotante y cambio de idioma.
 - `src/pages/og/[lang].png.ts`: imagen Open Graph de 1200×630 por idioma, generada en el build con Satori + resvg (fuentes TTF en `src/assets/og-fonts/`).
 - `public/`: fuentes autoalojadas, favicons y `robots.txt`. El sitemap lo genera `@astrojs/sitemap`.

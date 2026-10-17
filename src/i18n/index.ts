@@ -79,7 +79,15 @@ export interface Dict {
     excalidraw: Fact;
     languages: Fact;
   };
-  footer: { changelog: string; privacy: string; label: string };
+  footer: {
+    navAria: string;
+    about: string;
+    legal: string;
+    terms: string;
+    privacy: string;
+    copyright: string;
+    stickerAria: string;
+  };
 }
 
 export interface Feature {

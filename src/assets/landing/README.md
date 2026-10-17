@@ -116,3 +116,15 @@ Renglones: líneas de 1px en `#C9D3D3` a 48px y 108px del borde superior. Esquin
 | Brote | `#A8D5A2` | `#95C98E` |
 
 Construcción: contorno de tinta de 1.5px, banda adhesiva de 34px arriba, esquina inferior derecha doblada de 34px. Es la misma construcción que las notas adhesivas de la app (`brand/notes`): si allí la esquina o la banda difieren, iguálalas a las de la app.
+
+## Añadidos (footer)
+
+### `logo/sticker-a-flat.png` y `logo/sticker-a-peeling.png` (512×512)
+El sticker de la "a" del footer, a partir de `sticker-a-512.png`:
+- `flat`: el sticker sin la sombra pintada, para que la sombra la ponga el CSS y pueda cambiar al levantarlo.
+- `peeling`: el mismo con la esquina inferior derecha despegada (reverso en papel `#EFE8D6` con contorno de tinta). Se muestra mientras se arrastra, igual que el sticker del nav.
+
+Se usan a 150px. Sombra en reposo: `drop-shadow(0 4px 0 rgba(15,12,8,.45))`; al arrastrar: `drop-shadow(0 18px 16px rgba(20,16,10,.35))`. Usa `filter: drop-shadow` y no `box-shadow`, porque la silueta es troquelada.
+
+### `icons/social/` (24×24, `currentColor`, relleno)
+`instagram.svg`, `linkedin.svg`, `github.svg`. Instagram y GitHub vienen de Simple Icons (CC0). El de LinkedIn está dibujado a mano, porque Simple Icons lo retiró a pedido de la marca: si quieres el oficial, descárgalo del kit de marca de LinkedIn.

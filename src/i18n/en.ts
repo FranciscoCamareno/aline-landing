@@ -102,5 +102,14 @@ export const en: Dict = {
     excalidraw: { title: "Excalidraw friendly.", body: "Bring your .excalidraw files in, take them back out." },
     languages: { title: "English y español.", body: "The whole app follows your language." },
   },
-  footer: { changelog: "Changelog", privacy: "Privacy", label: "Footer" },
+  footer: {
+    navAria: "Footer",
+    about: "About us",
+    legal: "Legal",
+    terms: "Terms",
+    privacy: "Privacy",
+    copyright: "© 2026 aline",
+    stickerAria:
+      "aline sticker. Drag it anywhere on the page, or use the arrow keys. Double-click or press Escape to stick it back.",
+  },
 };

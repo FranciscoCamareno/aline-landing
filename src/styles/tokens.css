@@ -30,6 +30,13 @@
   --sticker-agua: #BFDFE2;
   --wood: #F1D3A6;             /* madera del lápiz */
 
+  /* Tema oscuro (de momento solo el footer; servirán para el tema oscuro futuro) */
+  --dark-text: #F3EEDF;        /* crema */
+  --dark-text-2: #B5AC97;      /* arena */
+  --dark-line: #3A3428;        /* cuero */
+  --dark-highlight: #6B5520;   /* resaltador oscuro */
+  --focus-on-dark: #7FC4CC;    /* agua luz */
+
   /* Tipografía */
   --font-ui: "Nunito", system-ui, sans-serif;
   --font-logo: "Cherry Bomb One", "Nunito", sans-serif;

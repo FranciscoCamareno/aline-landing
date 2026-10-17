@@ -1,7 +1,20 @@
 ---
-import wordmark from "../assets/landing/logo/aline-wordmark.svg";
+/*
+ * Footer oscuro: enlaces y redes arriba, el logotipo "aline" gigante abajo, cortado por el borde,
+ * y el sticker de la "a" pegado encima, despegable como el del nav (mismo componente).
+ *
+ * Ni <footer> ni .foot pueden llevar transform, filter ni rotate: el sticker suelto es
+ * position: fixed. Tampoco z-index: el sticker suelto tiene que poder quedar por encima de todo.
+ */
+import { getImage } from "astro:assets";
 import LangSwitch from "./LangSwitch.astro";
-import { CHANGELOG_URL, PRIVACY_URL } from "../config/site";
+import Sticker from "./Sticker.astro";
+import stickerFlat from "../assets/landing/logo/sticker-a-flat.png";
+import stickerPeel from "../assets/landing/logo/sticker-a-peeling.png";
+import instagramIcon from "../assets/landing/icons/social/instagram.svg?raw";
+import linkedinIcon from "../assets/landing/icons/social/linkedin.svg?raw";
+import githubIcon from "../assets/landing/icons/social/github.svg?raw";
+import { ABOUT_URL, GITHUB_URL, INSTAGRAM_URL, LINKEDIN_URL, PRIVACY_URL, TERMS_URL } from "../config/site";
 import { getT, type Lang } from "../i18n";
 
 interface Props {
@@ -10,76 +23,294 @@ interface Props {
 
 const { lang } = Astro.props;
 const t = getT(lang);
+
+// Las PNG son de 512px; se muestran a 150px (300px para pantallas densas)
+const [flat, peel] = await Promise.all([
+  getImage({ src: stickerFlat, width: 300, format: "webp", quality: 85 }),
+  getImage({ src: stickerPeel, width: 300, format: "webp", quality: 85 }),
+]);
+
+const socials = [
+  { name: "Instagram", href: INSTAGRAM_URL, icon: instagramIcon },
+  { name: "LinkedIn", href: LINKEDIN_URL, icon: linkedinIcon },
+  { name: "GitHub", href: GITHUB_URL, icon: githubIcon },
+];
 ---
 
 <footer class="footer">
-  <div class="container footer__inner">
-    <img class="footer__logo" src={wordmark.src} width="61" height="26" alt="aline" />
-    <p class="footer__slogan">{t.hero.title}</p>
-    <nav class="footer__links" aria-label={t.footer.label}>
-      <a href={CHANGELOG_URL}>{t.footer.changelog}</a>
-      <a href={PRIVACY_URL}>{t.footer.privacy}</a>
-      <LangSwitch lang={lang} />
-    </nav>
+  <div class="foot" data-sticker-slot>
+    <div class="foot-top">
+      <nav class="foot-links" aria-label={t.footer.navAria}>
+        <div class="foot-col">
+          <h2 class="foot-col__title">aline</h2>
+          <ul>
+            <li>
+              <a href={ABOUT_URL}>{t.footer.about}</a>
+            </li>
+          </ul>
+        </div>
+        <div class="foot-col">
+          <h2 class="foot-col__title">{t.footer.legal}</h2>
+          <ul>
+            <li>
+              <a href={TERMS_URL}>{t.footer.terms}</a>
+            </li>
+            <li>
+              <a href={PRIVACY_URL}>{t.footer.privacy}</a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="foot-brand">
+        <p class="foot-brand__slogan hand">{t.hero.title}</p>
+        <ul class="foot-social">
+          {socials.map((s) => (
+            <li>
+              <a href={s.href} aria-label={s.name} rel="noopener" set:html={s.icon} />
+            </li>
+          ))}
+        </ul>
+        <p class="foot-brand__meta">
+          <LangSwitch lang={lang} variant="dark" />
+          <span>{t.footer.copyright}</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="foot-mark" aria-hidden="true">
+      <span class="foot-mark__word">
+        <span class="foot-mark__hl"></span>
+        <span class="foot-mark__text">aline</span>
+      </span>
+    </div>
+
+    <span class="foot-slot" data-sticker-die aria-hidden="true"></span>
+    <Sticker
+      class="foot-sticker"
+      label={t.footer.stickerAria}
+      rest={flat.src}
+      peel={peel.src}
+      width={150}
+      height={150}
+      storageKey="aline-sticker-foot"
+      rotate={10}
+      insetRatio={91 / 512}
+      click="none"
+      shadow="drop-shadow(0 4px 0 rgba(15, 12, 8, 0.45))"
+      shadowLift="drop-shadow(0 18px 16px rgba(20, 16, 10, 0.35))"
+    />
   </div>
 </footer>
 
 <style>
   .footer {
+    --mark-size: min(29vw, 470px);
+    padding: 0 20px 20px;
+  }
+
+  .foot {
     position: relative;
-    z-index: 1;
-    background: var(--bg-panel);
-    border-top: 1.5px solid var(--border-soft);
+    max-width: 1400px;
+    margin-inline: auto;
+    overflow: hidden;
+    border-radius: 28px;
+    background-color: #262118;
+    /* La retícula del lienzo, en su versión oscura */
+    background-image: radial-gradient(var(--dark-line) 1.3px, transparent 1.6px);
+    background-size: 22px 22px;
+    color: var(--dark-text);
   }
 
-  .footer__inner {
+  .foot :focus-visible {
+    outline-color: var(--focus-on-dark);
+  }
+
+  /* ── Parte superior ─────────────────────────────────────────────────── */
+  .foot-top {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 12px 24px;
-    padding-block: 28px;
+    gap: 48px 72px;
+    padding: 64px 64px 0;
   }
 
-  .footer__logo {
-    width: auto;
-    height: 26px;
+  .foot-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 48px 72px;
   }
 
-  .footer__slogan {
+  .foot-col__title {
+    margin: 0 0 10px;
+    color: var(--brand);
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+  }
+
+  .foot-col ul,
+  .foot-social {
     margin: 0;
-    color: var(--text-secondary);
-    font-size: 14px;
+    padding: 0;
+    list-style: none;
   }
 
-  .footer__links {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 14px;
-    margin-left: auto;
-  }
-
-  .footer__links > a {
+  .foot-col a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    padding: 0 6px;
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    font-size: 15px;
+    border-radius: 6px;
+    color: var(--dark-text);
+    font-size: 17px;
     font-weight: 700;
     text-decoration: none;
   }
 
   @media (hover: hover) {
-    .footer__links > a:hover {
+    .foot-col a:hover {
       text-decoration: underline;
+      text-decoration-color: var(--brand-hover);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 6px;
+    }
+  }
+
+  .foot-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 260px;
+    margin-left: auto;
+  }
+
+  .foot-brand__slogan {
+    margin: 0;
+    color: var(--dark-text);
+    font-size: 26px;
+    line-height: 1.2;
+  }
+
+  .foot-social {
+    display: flex;
+    gap: 6px;
+    margin-left: -10px;
+  }
+
+  .foot-social a {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    color: var(--brand);
+    transition:
+      background-color 150ms var(--ease-out),
+      color 150ms var(--ease-out);
+  }
+
+  .foot-social a :global(svg) {
+    width: 24px;
+    height: 24px;
+  }
+
+  @media (hover: hover) {
+    .foot-social a:hover {
+      background: var(--brand);
+      color: var(--text-primary);
+    }
+  }
+
+  .foot-brand__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    margin: 0;
+    color: var(--dark-text-2);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .foot-brand__meta :global(.lang) {
+    margin-left: -6px;
+  }
+
+  /* ── Logotipo gigante, cortado por el borde inferior ─────────────────── */
+  .foot-mark {
+    display: flex;
+    justify-content: center;
+    height: calc(var(--mark-size) * 0.66);
+    margin-top: 56px;
+    overflow: hidden;
+  }
+
+  .foot-mark__word {
+    position: relative;
+    display: inline-block;
+    font-family: var(--font-logo);
+    font-size: var(--mark-size);
+    line-height: 0.8;
+    color: var(--dark-text);
+    white-space: nowrap;
+  }
+
+  .foot-mark__hl {
+    position: absolute;
+    left: -0.02em;
+    right: -0.04em;
+    top: 0.3em;
+    height: 0.34em;
+    border-radius: 0.05em 0.09em 0.06em 0.1em;
+    background: var(--dark-highlight);
+    transform: rotate(-1.5deg);
+  }
+
+  .foot-mark__text {
+    position: relative;
+  }
+
+  /* ── Sticker de la "a": pegado sobre la parte alta del logotipo, cerca de la "l" ── */
+  /* Sin "position" para el sticker: la pone el componente (absolute pegado, fixed suelto) */
+  .foot-slot,
+  .foot :global(.foot-sticker) {
+    left: calc(50% + min(4vw, 66px));
+    bottom: calc(var(--mark-size) * 0.25);
+    width: 150px;
+    height: 150px;
+  }
+
+  .foot-slot {
+    position: absolute;
+  }
+
+  .foot-slot {
+    transform: rotate(10deg);
+    pointer-events: none;
+  }
+
+  .foot :global(.foot-sticker) {
+    --sticker-focus: var(--focus-on-dark);
+  }
+
+  @media (max-width: 699.98px) {
+    .foot-top {
+      padding: 44px 24px 0;
+    }
+
+    .foot-brand {
+      margin-left: 0;
     }
   }
 
   @media (max-width: 599.98px) {
-    .footer__links {
-      margin-left: -6px;
+    .footer {
+      padding: 0 12px 12px;
+    }
+
+    .foot-slot,
+    .foot :global(.foot-sticker) {
+      width: 110px;
+      height: 110px;
     }
   }
 </style>

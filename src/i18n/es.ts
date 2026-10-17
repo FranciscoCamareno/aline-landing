@@ -106,5 +106,14 @@ export const es: Dict = {
     },
     languages: { title: "English y español.", body: "Toda la app sigue tu idioma." },
   },
-  footer: { changelog: "Novedades", privacy: "Privacidad", label: "Pie de página" },
+  footer: {
+    navAria: "Pie de página",
+    about: "Acerca de",
+    legal: "Legal",
+    terms: "Términos",
+    privacy: "Privacidad",
+    copyright: "© 2026 aline",
+    stickerAria:
+      "Sticker de aline. Arrástralo a cualquier parte de la página o muévelo con las flechas. Doble clic o Escape para volver a pegarlo.",
+  },
 };

@@ -4,8 +4,8 @@ import { getT } from "../i18n";
 
 interface Props {
   lang: Lang;
-  /** "hand": escrito a mano en la hoja de libreta del nav. */
-  variant?: "ui" | "hand";
+  /** "hand": escrito a mano en la hoja de libreta del nav. "dark": sobre la tinta del footer. */
+  variant?: "ui" | "hand" | "dark";
 }
 
 const { lang, variant = "ui" } = Astro.props;
@@ -81,6 +81,28 @@ const t = getT(lang);
   .lang--hand .lang__sep {
     color: var(--text-secondary);
     font-weight: 400;
+  }
+
+  /* Sobre el fondo tinta del footer */
+  .lang--dark {
+    color: var(--dark-text-2);
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .lang--dark .lang__opt.is-active {
+    color: var(--brand);
+    font-weight: 800;
+  }
+
+  .lang--dark .lang__sep {
+    color: var(--dark-text-2);
+  }
+
+  @media (hover: hover) {
+    .lang--dark:hover .lang__opt:not(.is-active) {
+      color: var(--dark-text);
+    }
   }
 
   @media (hover: hover) {

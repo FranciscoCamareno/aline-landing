@@ -8,6 +8,8 @@ import DrawnButton from "./DrawnButton.astro";
 import LangSwitch from "./LangSwitch.astro";
 import Sticker from "./Sticker.astro";
 import alinePencil from "../assets/landing/logo/aline-pencil.svg";
+import sticker from "../assets/landing/logo/aline-sticker.svg";
+import stickerPeeling from "../assets/landing/logo/aline-sticker-peeling.svg";
 import backing from "../assets/landing/logo/sticker-backing.svg";
 import notebookEdge from "../assets/landing/nav/notebook-edge.svg";
 import washiYellow from "../assets/landing/doodles/washi-tape-yellow.svg";
@@ -32,7 +34,18 @@ const t = getT(lang);
     <a class="logo-dock__pencil" href="#top" tabindex="-1" data-sticker-under>
       <img src={alinePencil.src} width="120" height="44" alt="aline" />
     </a>
-    <Sticker label={t.sticker.aria} />
+    <Sticker
+      class="logo-dock__sticker"
+      label={t.sticker.aria}
+      rest={sticker.src}
+      peel={stickerPeeling.src}
+      width={140}
+      height={60}
+      storageKey="aline.sticker"
+      rotate={-2}
+      insetRatio={4 / 140}
+      click="top"
+    />
     <p class="logo-dock__hint hand" aria-hidden="true">
       <span class="logo-dock__arrow">
         <span class="logo-dock__arrow-halo" set:html={arrowRaw} />
@@ -40,29 +53,6 @@ const t = getT(lang);
       </span>
       {t.sticker.hint}
     </p>
-    <!-- Aplica el estado guardado del sticker antes del primer pintado: sin esto, el aviso y el
-         sticker se ven un instante en el troquel hasta que carga la isla (misma lógica que Sticker.astro) -->
-    <script is:inline>
-      (function () {
-        try {
-          const s = JSON.parse(localStorage.getItem("aline.sticker") || "null");
-          if (!s || !isFinite(s.x) || !isFinite(s.y)) return;
-          const dock = document.currentScript.parentElement;
-          const el = dock.querySelector("[data-sticker]");
-          const inset = (el.offsetWidth * 4) / 140;
-          const maxX = document.documentElement.clientWidth - el.offsetWidth + inset - 8;
-          const maxY = window.innerHeight - el.offsetHeight + inset - 8;
-          if (s.x < 8 - inset || s.y < 8 - inset || s.x > maxX || s.y > maxY) return;
-          dock.classList.add("is-peeled");
-          el.classList.add("is-loose");
-          el.style.left = s.x + "px";
-          el.style.top = s.y + "px";
-          el.style.transform = "rotate(" + (isFinite(s.rot) ? s.rot : 0) + "deg) scale(1)";
-        } catch {
-          /* sin almacenamiento: se queda en el troquel */
-        }
-      })();
-    </script>
   </div>
 
   <nav class="paper" aria-label={t.nav.label} data-nav-paper data-return={NAV_PAPER_RETURN}>
@@ -173,6 +163,14 @@ const t = getT(lang);
   .logo-dock__pencil img {
     width: 100%;
     height: 100%;
+  }
+
+  /* El sticker pegado: centrado en el troquel (--k escala el logo en pantallas estrechas) */
+  .logo-dock :global(.logo-dock__sticker) {
+    left: calc(12px * var(--k));
+    top: calc(10px * var(--k));
+    width: calc(140px * var(--k));
+    height: calc(60px * var(--k));
   }
 
   .logo-dock__hint {

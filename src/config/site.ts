@@ -11,8 +11,14 @@ export const INSTALL_URL = "#";
 export const NAV_PAPER_RETURN: "top" | "scrollUp" = "top";
 
 /** Enlaces del footer. */
-export const CHANGELOG_URL = "#";
+export const ABOUT_URL = "#";
+export const TERMS_URL = "#";
 export const PRIVACY_URL = "#";
+
+/** Redes del footer. */
+export const INSTAGRAM_URL = "#";
+export const LINKEDIN_URL = "#";
+export const GITHUB_URL = "#";
 
 /** Dominio público, para canonical y hreflang. */
 export const SITE_URL = "https://aline.app";
