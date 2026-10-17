@@ -80,8 +80,7 @@ const STRIKE =
                 loading="eager"
                 data-pencil
               />
-            </span>
-            {t.hero.suffix}
+            </span><span class="hero__suffix" data-suffix>{t.hero.suffix}</span>
           </span>
         </span>
       </h1>
@@ -104,9 +103,8 @@ const STRIKE =
 <script>
   import { heroConfig } from "../config/hero";
 
-  const { timings: T, pencilTip, pencilSize, baseline, wobble } = heroConfig;
+  const { timings: T, pencilTip, pencilSize, baseline, wobble, away } = heroConfig;
 
-  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
   const easeInOut = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
   const easeOut = (p: number) => 1 - (1 - p) ** 3;
   const lerp = (a: number, b: number, p: number) => a + (b - a) * p;
@@ -118,7 +116,8 @@ const STRIKE =
     const hl = section.querySelector<SVGElement>("[data-hl]");
     const strike = section.querySelector<SVGElement>("[data-strike]");
     const pencil = section.querySelector<HTMLImageElement>("img[data-pencil]");
-    if (!word || !ink || !text || !hl || !strike || !pencil) return;
+    const suffix = section.querySelector<HTMLElement>("[data-suffix]");
+    if (!word || !ink || !text || !hl || !strike || !pencil || !suffix) return;
 
     let words: string[] = [];
     try {
@@ -133,6 +132,24 @@ const STRIKE =
       index = i % words.length;
       text.textContent = words[index] ?? "";
     };
+
+    /**
+     * Hueco fijo para la palabra: el ancho de la más larga, en em para que escale con el titular.
+     * Así el sufijo (" it out." / ".") no se mueve al cambiar de palabra.
+     */
+    function reserveSlot() {
+      const current = text!.textContent;
+      word!.style.minWidth = "";
+      let max = 0;
+      for (const w of words) {
+        text!.textContent = w;
+        max = Math.max(max, text!.offsetWidth);
+      }
+      text!.textContent = current;
+      const fontSize = parseFloat(getComputedStyle(word!).fontSize) || 1;
+      word!.style.minWidth = `${(max / fontSize).toFixed(3)}em`;
+    }
+    document.fonts.ready.then(reserveSlot);
 
     // Movimiento reducido: sin lápiz ni animación, la palabra cambia cada 2.6 s
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -154,9 +171,10 @@ const STRIKE =
       const p1 = p0 + write;
       const p2 = p1 + T.highlight;
       const p3 = p2 + T.hold;
-      const p4 = p3 + T.strike;
+      const p3b = p3 + T.approach;
+      const p4 = p3b + T.strike;
       const p5 = p4 + T.fade;
-      return { write, p0, p1, p2, p3, p4, p5 };
+      return { write, p0, p1, p2, p3, p3b, p4, p5 };
     };
 
     let elapsed = 0;
@@ -189,9 +207,12 @@ const STRIKE =
       const h = text!.offsetHeight;
       const t = elapsed;
       const baseY = h * baseline;
-      // posición del lápiz tras resaltar: arriba a la derecha
-      const awayX = w + h * 0.3;
-      const awayY = baseY - h * 0.5;
+      // Tras resaltar, el lápiz se aparta a la derecha del sufijo, a la altura de la línea,
+      // para que el eslogan se lea entero
+      const suffixEnd = suffix!.offsetLeft + suffix!.offsetWidth - word!.offsetLeft;
+      const awayX = suffixEnd + h * away.x;
+      const awayY = baseY + h * away.y;
+      const strikeY = (e: number) => h * 0.55 + Math.sin(e * Math.PI * 14) * h * 0.14;
 
       let reveal = 0;
       let highlight = 0;
@@ -210,28 +231,32 @@ const STRIKE =
         hx = e * w + Math.sin(e * Math.PI * 2 * cycles * 1.3) * wobble.x * w;
         hy = baseY - Math.abs(Math.sin(e * Math.PI * cycles)) * wobble.y * h * 2 + wobble.y * h;
       } else if (t < ph.p2) {
-        const p = easeOut((t - ph.p1) / T.highlight);
+        const p = (t - ph.p1) / T.highlight;
+        const e = easeInOut(p);
         reveal = 1;
-        highlight = p;
-        hx = lerp(w, awayX, p);
-        hy = lerp(baseY, awayY, p);
+        highlight = easeOut(p);
+        hx = lerp(w, awayX, e);
+        hy = lerp(baseY, awayY, e) - Math.sin(Math.PI * e) * h * 0.25;
       } else if (t < ph.p3) {
         const s = (t - ph.p2) / 1000;
         reveal = 1;
         highlight = 1;
         hx = awayX + Math.sin(s * 2.2) * h * 0.04;
         hy = awayY + Math.sin(s * 3.1) * h * 0.05;
+      } else if (t < ph.p3b) {
+        // Se acerca con calma, en arco, al inicio del tachado
+        const e = easeInOut((t - ph.p3) / T.approach);
+        reveal = 1;
+        highlight = 1;
+        hx = lerp(awayX, 0, e);
+        hy = lerp(awayY, strikeY(0), e) - Math.sin(Math.PI * e) * h * 0.3;
       } else if (t < ph.p4) {
-        const p = (t - ph.p3) / T.strike;
-        const e = easeInOut(p);
+        const e = easeInOut((t - ph.p3b) / T.strike);
         reveal = 1;
         highlight = 1;
         strikeP = e;
-        const sx = e * w;
-        const sy = h * 0.55 + Math.sin(e * Math.PI * 14) * h * 0.14;
-        const blend = easeOut(clamp01(p / 0.3));
-        hx = lerp(awayX, sx, blend);
-        hy = lerp(awayY, sy, blend);
+        hx = e * w;
+        hy = strikeY(e);
       } else {
         const p = easeInOut((t - ph.p4) / T.fade);
         reveal = 1;
@@ -356,6 +381,10 @@ const STRIKE =
     font-size: 1em;
     line-height: 1;
     letter-spacing: 0;
+  }
+
+  .hero__suffix {
+    white-space: pre;
   }
 
   .hw__ink {

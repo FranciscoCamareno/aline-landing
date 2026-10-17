@@ -25,10 +25,17 @@ export const heroConfig = {
     writePerLetter: 140,
     highlight: 530,
     hold: 2100,
-    strike: 700,
+    /** El lápiz vuelve desde su sitio apartado al inicio del tachado. */
+    approach: 750,
+    strike: 850,
     fade: 600,
     reducedMotionInterval: 2600,
   },
+  /**
+   * Dónde se aparta el lápiz mientras se sostiene la palabra: a la derecha del sufijo,
+   * en fracciones del alto de la palabra (x hacia la derecha, y hacia abajo desde la línea).
+   */
+  away: { x: 0.3, y: 0.1 },
   /** Movimiento del lápiz al escribir: fracción del ancho / alto de la palabra. */
   wobble: { x: 0.012, y: 0.08 },
 } as const;

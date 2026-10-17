@@ -23,7 +23,6 @@ const { label } = Astro.props;
 
 <script>
   const STORE_KEY = "aline.sticker";
-  const PEELED_KEY = "aline.sticker.peeled";
   /** Margen transparente del SVG alrededor del sticker visible (140×60 → 132×52). */
   const INSET = 4;
   const EDGE = 8;
@@ -109,9 +108,9 @@ const { label } = Astro.props;
       }
     }
 
+    /** El aviso se oculta al despegarlo y vuelve en la siguiente carga si el sticker está en su ranura. */
     function markPeeled() {
       slot!.classList.add("is-peeled");
-      store.set(PEELED_KEY, true);
     }
 
     function save() {
@@ -271,7 +270,6 @@ const { label } = Astro.props;
     });
 
     // Estado inicial
-    if (store.get<boolean>(PEELED_KEY)) slot.classList.add("is-peeled");
     const saved = store.get<Saved>(STORE_KEY);
     if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
       const b = bounds();
@@ -282,6 +280,7 @@ const { label } = Astro.props;
         rot = Number.isFinite(saved.rot) ? saved.rot : 0;
         el.style.transition = "none";
         setLoose(true);
+        markPeeled();
         render();
         void el.offsetWidth;
         el.style.transition = "";
