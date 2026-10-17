@@ -1,0 +1,15 @@
+{
+  // Despliegue en Cloudflare (Workers con assets estáticos): `npx wrangler deploy` sube dist/.
+  // Sin este archivo, wrangler intenta autoconfigurar el proyecto (instala el adaptador de Astro
+  // para Cloudflare y vuelve a compilar), y esa compilación falla.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aline-landing",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-12",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // El Worker solo atiende la raíz (redirección por idioma); el resto se sirve directo desde dist/
+    "run_worker_first": ["/"]
+  }
+}

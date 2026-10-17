@@ -10,19 +10,24 @@ pnpm dev          # http://localhost:4321/en/ y /es/
 pnpm check        # astro check + tipos del middleware
 pnpm lint
 pnpm build        # salida en dist/ (incluye las imágenes Open Graph y el sitemap)
-pnpm pages:dev    # build + wrangler pages dev (prueba el middleware de idioma en /)
+pnpm preview:worker   # build + wrangler dev: prueba el Worker de idioma en / y las cabeceras
 node scripts/favicons.mjs   # regenera favicon-32.png y apple-touch-icon.png
 ```
 
-Con `pnpm dev`, la raíz `/` usa el fallback en cliente (`src/pages/index.astro`). El middleware solo corre con Wrangler o en Cloudflare.
+Con `pnpm dev`, la raíz `/` usa el fallback en cliente (`src/pages/index.astro`). El Worker de idioma solo corre con Wrangler (`pnpm preview:worker`) o en Cloudflare.
 
 pnpm aplica una edad mínima de publicación a las dependencias: si un `pnpm add` falla con `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`, fija una versión publicada hace más de un día.
 
-## Despliegue (Cloudflare Pages)
+## Despliegue (Cloudflare Workers con assets estáticos)
 
-- Comando de build: `pnpm build`
-- Directorio de salida: `dist`
-- El middleware de idioma vive en `functions/_middleware.ts` y Pages lo detecta solo.
+El proyecto es un Worker (no Pages) y se despliega con `npx wrangler deploy`, que sube `dist/` según [wrangler.jsonc](wrangler.jsonc).
+
+- Comando de build: `pnpm run build`
+- Comando de despliegue: `npx wrangler deploy`
+- Versión de pnpm: la fija `packageManager` en `package.json` (Cloudflare usaría la 9.10 por defecto y no instalaría). Si algún día ignora ese campo, define `PNPM_VERSION` en las variables de entorno del proyecto.
+- `worker/index.ts` es el único código que se ejecuta en el servidor: redirige `/` a `/en/` o `/es/` (cookie `lang`, luego `Accept-Language`; los rastreadores reciben `/en/`). El resto lo sirve Cloudflare directamente desde `dist/`.
+- `public/_headers` aplica las cabeceras de seguridad (CSP, nosniff, X-Frame-Options…) y la caché larga de `/_astro/*`.
+- **No quites `wrangler.jsonc`**: sin él, wrangler intenta autoconfigurar el proyecto (instala el adaptador de Astro para Cloudflare), vuelve a compilar y falla con el módulo nativo de `resvg`.
 
 ## Dónde se cambia cada cosa
 

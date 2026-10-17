@@ -1,5 +1,9 @@
 /**
- * Redirección por idioma en la raíz "/" (Cloudflare Pages Functions).
+ * Worker de la landing (Cloudflare Workers con assets estáticos, ver wrangler.jsonc).
+ * Solo se ejecuta para la raíz "/" (`run_worker_first`); todo lo demás lo sirve Cloudflare
+ * directamente desde dist/, sin pasar por aquí.
+ *
+ * Redirección por idioma en "/":
  * 1. Cookie `lang` → ese idioma.
  * 2. Si no, el primer idioma soportado de Accept-Language: es → /es/, cualquier otro → /en/.
  * Los rastreadores no se redirigen: se les sirve /en/ directamente.
@@ -36,23 +40,26 @@ function acceptLanguage(header: string | null): Lang {
   return first?.base === "es" ? "es" : "en";
 }
 
-export const onRequest: PagesFunction<Env> = async (ctx) => {
-  const url = new URL(ctx.request.url);
-  if (url.pathname !== "/") return ctx.next();
+export default {
+  async fetch(request, env): Promise<Response> {
+    const url = new URL(request.url);
+    // Cualquier otra ruta: archivos estáticos (también las de _headers)
+    if (url.pathname !== "/") return env.ASSETS.fetch(request);
 
-  const ua = ctx.request.headers.get("user-agent") ?? "";
-  if (BOT_UA.test(ua)) {
-    return ctx.env.ASSETS.fetch(new Request(new URL("/en/", url), ctx.request));
-  }
+    const ua = request.headers.get("user-agent") ?? "";
+    if (BOT_UA.test(ua)) {
+      return env.ASSETS.fetch(new Request(new URL("/en/", url), request));
+    }
 
-  const lang = cookieLang(ctx.request.headers.get("cookie")) ?? acceptLanguage(ctx.request.headers.get("accept-language"));
+    const lang = cookieLang(request.headers.get("cookie")) ?? acceptLanguage(request.headers.get("accept-language"));
 
-  return new Response(null, {
-    status: 302,
-    headers: {
-      Location: `/${lang}/${url.search}`,
-      Vary: "Accept-Language, Cookie, User-Agent",
-      "Cache-Control": "private, no-store",
-    },
-  });
-};
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: `/${lang}/${url.search}`,
+        Vary: "Accept-Language, Cookie, User-Agent",
+        "Cache-Control": "private, no-store",
+      },
+    });
+  },
+} satisfies ExportedHandler<Env>;

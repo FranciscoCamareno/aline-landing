@@ -12,10 +12,11 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check && tsc -p functions",
+    "check": "astro check && tsc -p worker",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "pages:dev": "pnpm build && wrangler pages dev dist"
+    "preview:worker": "pnpm build && wrangler dev",
+    "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
