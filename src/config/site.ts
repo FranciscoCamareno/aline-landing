@@ -1,5 +1,5 @@
-/** Destino de "Open aline". */
-export const APP_URL = "#";
+/** Destino de "Open aline": la aplicación. */
+export const APP_URL = "https://app.aline.website/";
 
 /**
  * Destinos de los enlaces internos. Un valor que empieza por "/" es una página de este sitio y se
@@ -29,6 +29,9 @@ export const TERMS_URL = "/terms/";
 export const PRIVACY_URL = "/privacy/";
 
 /** Redes del footer. */
+// Instagram aún no existe: el icono (src/assets/landing/icons/social/instagram.svg) y esta URL se
+// quedan listos y no se muestran en el footer. Cuando exista la cuenta, pon aquí su URL y añade
+// "instagram" a la lista `socials` de src/components/Footer.astro.
 export const INSTAGRAM_URL = "#";
 export const LINKEDIN_URL = "https://www.linkedin.com/in/franciscocamareno/";
 export const GITHUB_URL = "#";

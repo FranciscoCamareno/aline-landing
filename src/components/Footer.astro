@@ -11,18 +11,9 @@ import LangSwitch from "./LangSwitch.astro";
 import Sticker from "./Sticker.astro";
 import stickerFlat from "../assets/landing/logo/sticker-a-flat.png";
 import stickerPeel from "../assets/landing/logo/sticker-a-peeling.png";
-import instagramIcon from "../assets/landing/icons/social/instagram.svg?raw";
 import linkedinIcon from "../assets/landing/icons/social/linkedin.svg?raw";
 import githubIcon from "../assets/landing/icons/social/github.svg?raw";
-import {
-  ABOUT_URL,
-  GITHUB_URL,
-  INSTAGRAM_URL,
-  LINKEDIN_URL,
-  PRIVACY_URL,
-  TERMS_URL,
-  localizeUrl,
-} from "../config/site";
+import { ABOUT_URL, GITHUB_URL, LINKEDIN_URL, PRIVACY_URL, TERMS_URL, localizeUrl } from "../config/site";
 import { getT, type Lang } from "../i18n";
 
 interface Props {
@@ -40,8 +31,9 @@ const [flat, peel] = await Promise.all([
   getImage({ src: stickerPeel, width: 300, format: "webp", quality: 85 }),
 ]);
 
+// Instagram: aún no hay cuenta. Para mostrarlo, importa icons/social/instagram.svg y añade
+// { name: "Instagram", href: INSTAGRAM_URL, icon } aquí (la URL ya está en config/site.ts).
 const socials = [
-  { name: "Instagram", href: INSTAGRAM_URL, icon: instagramIcon },
   { name: "LinkedIn", href: LINKEDIN_URL, icon: linkedinIcon },
   { name: "GitHub", href: GITHUB_URL, icon: githubIcon },
 ];
