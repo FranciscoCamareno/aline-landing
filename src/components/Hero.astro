@@ -3,6 +3,8 @@ import { Picture } from "astro:assets";
 import DrawnButton from "./DrawnButton.astro";
 import heroBg from "../assets/hero/aline-hero-img.jpg";
 import pencil from "../assets/hero/aline-lapiz.webp";
+// Miniatura de 48px (324 bytes) que se pinta al instante mientras llega el fondo
+import heroLqip from "../assets/hero/aline-hero-lqip.webp?inline";
 import { APP_URL, INSTALL_URL } from "../config/site";
 import { heroConfig } from "../config/hero";
 import { getT, type Lang } from "../i18n";
@@ -24,6 +26,7 @@ const cssVars = [
   `--sheet-h: ${sheet.h / 100}`,
   `--sheet-rot: ${sheet.rotate}deg`,
   `--sheet-max: ${heroConfig.sheetMaxPx}px`,
+  `--hero-lqip: url("${heroLqip}")`,
   `--pencil-w: ${heroConfig.pencilWidthEm.desktop}em`,
   `--pencil-w-sm: ${heroConfig.pencilWidthEm.mobile}em`,
 ].join("; ");
@@ -44,7 +47,7 @@ const STRIKE =
       alt=""
       formats={["avif", "webp"]}
       fallbackFormat="jpg"
-      widths={[640, 960, 1440, 1920, 2560]}
+      widths={[1200, 1600, 2000, 2560]}
       sizes="(max-width: 599px) 1140px, (max-width: 1969px) 1970px, 100vw"
       quality={55}
       loading="eager"
@@ -135,7 +138,8 @@ const STRIKE =
 
     /**
      * Hueco fijo para la palabra: el ancho de la más larga, en em para que escale con el titular.
-     * Así el sufijo (" it out." / ".") no se mueve al cambiar de palabra.
+     * Así el sufijo (" it out." / ".") no se mueve al cambiar de palabra. La palabra va alineada a
+     * la derecha del hueco, pegada al sufijo, para que la frase se lea seguida.
      */
     function reserveSlot() {
       const current = text!.textContent;
@@ -183,9 +187,11 @@ const STRIKE =
     let running = false;
 
     function placePencil(x: number, y: number) {
-      // La punta del lápiz, escalada al tamaño renderizado, cae sobre (x, y)
+      // La punta del lápiz, escalada al tamaño renderizado, cae sobre (x, y). Las coordenadas son
+      // relativas a la palabra; ink.offsetLeft es el hueco que queda a su izquierda dentro del espacio fijo.
       const scale = pencil!.offsetWidth / pencilSize.width;
-      pencil!.style.transform = `translate(${x - pencilTip.x * scale}px, ${y - pencilTip.y * scale}px)`;
+      const ox = ink!.offsetLeft;
+      pencil!.style.transform = `translate(${ox + x - pencilTip.x * scale}px, ${y - pencilTip.y * scale}px)`;
     }
 
     function frame(now: number) {
@@ -209,7 +215,7 @@ const STRIKE =
       const baseY = h * baseline;
       // Tras resaltar, el lápiz se aparta a la derecha del sufijo, a la altura de la línea,
       // para que el eslogan se lea entero
-      const suffixEnd = suffix!.offsetLeft + suffix!.offsetWidth - word!.offsetLeft;
+      const suffixEnd = suffix!.offsetLeft + suffix!.offsetWidth - word!.offsetLeft - ink!.offsetLeft;
       const awayX = suffixEnd + h * away.x;
       const awayY = baseY + h * away.y;
       const strikeY = (e: number) => h * 0.55 + Math.sin(e * Math.PI * 14) * h * 0.14;
@@ -322,6 +328,7 @@ const STRIKE =
 
   .hero__stage {
     position: absolute;
+    background: var(--hero-lqip) center / 100% 100% no-repeat;
     left: calc(50% - var(--sw) * var(--sheet-cx));
     top: calc(50% - var(--sh) * var(--sheet-cy));
     width: var(--sw);
@@ -378,6 +385,7 @@ const STRIKE =
   .hw {
     position: relative;
     display: inline-block;
+    text-align: right;
     font-size: 1em;
     line-height: 1;
     letter-spacing: 0;

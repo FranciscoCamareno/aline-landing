@@ -26,6 +26,28 @@ const t = getT(lang);
         <span class="nav__hint-arrow" set:html={arrowRaw} />
         {t.sticker.hint}
       </p>
+      <!-- Aplica el estado guardado del sticker antes del primer pintado: sin esto, el aviso y el
+           sticker se ven un instante en la ranura hasta que carga la isla (misma lógica que Sticker.astro) -->
+      <script is:inline>
+        (function () {
+          try {
+            const s = JSON.parse(localStorage.getItem("aline.sticker") || "null");
+            if (!s || !isFinite(s.x) || !isFinite(s.y)) return;
+            const maxX = document.documentElement.clientWidth - 140 + 4 - 8;
+            const maxY = window.innerHeight - 60 + 4 - 8;
+            if (s.x < 4 || s.y < 4 || s.x > maxX || s.y > maxY) return;
+            const slot = document.currentScript.parentElement;
+            const el = slot.querySelector("[data-sticker]");
+            slot.classList.add("is-peeled");
+            el.classList.add("is-loose");
+            el.style.left = s.x + "px";
+            el.style.top = s.y + "px";
+            el.style.transform = "rotate(" + (isFinite(s.rot) ? s.rot : 0) + "deg) scale(1)";
+          } catch {
+            /* sin almacenamiento: se queda en la ranura */
+          }
+        })();
+      </script>
     </div>
 
     <nav class="nav__links" aria-label={t.nav.label}>
