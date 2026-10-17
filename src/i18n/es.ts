@@ -1,4 +1,5 @@
 import type { Dict } from "./index";
+import { pagesEs } from "./pages-es";
 
 // Eslogan provisional: se cambia en meta.title, hero.title, hero.line1 y hero.words.
 export const es: Dict = {
@@ -106,14 +107,7 @@ export const es: Dict = {
     },
     languages: { title: "English y español.", body: "Toda la app sigue tu idioma." },
   },
-  pages: {
-    soon: "diseño en camino",
-    back: "Volver al inicio",
-    install: { title: "Instalar aline", body: "Aquí irán las instrucciones para instalarla en escritorio y iPad." },
-    about: { title: "Acerca de", body: "Aquí irá la historia detrás de aline." },
-    terms: { title: "Términos", body: "Aquí irán los términos de uso." },
-    privacy: { title: "Privacidad", body: "Aquí irá la política de privacidad." },
-  },
+  pages: pagesEs,
   footer: {
     navAria: "Pie de página",
     about: "Acerca de",

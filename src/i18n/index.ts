@@ -79,14 +79,7 @@ export interface Dict {
     excalidraw: Fact;
     languages: Fact;
   };
-  pages: {
-    soon: string;
-    back: string;
-    install: PageCopy;
-    about: PageCopy;
-    terms: PageCopy;
-    privacy: PageCopy;
-  };
+  pages: PagesCopy;
   footer: {
     navAria: string;
     about: string;
@@ -98,9 +91,51 @@ export interface Dict {
   };
 }
 
-export interface PageCopy {
+/** Una sección de una página de texto (Acerca de, Términos, Privacidad). */
+export interface DocSection {
   title: string;
-  body: string;
+  paragraphs?: string[];
+  items?: string[];
+  /** Párrafos que van después de la lista. */
+  after?: string[];
+  /** Enlace a otra página del sitio al final de la sección. */
+  link?: { text: string; to: "install" | "about" | "terms" | "privacy" };
+}
+
+export interface DocPage {
+  title: string;
+  /** También es la descripción de la página para buscadores. */
+  intro: string;
+  /** "En pocas palabras": las ideas clave, en una nota adhesiva. */
+  highlights?: string[];
+  sections: DocSection[];
+}
+
+export type InstallTab = "chrome" | "edge" | "ipad";
+
+export interface InstallPageCopy {
+  title: string;
+  intro: string;
+  tabsLabel: string;
+  tabs: Record<InstallTab, string>;
+  steps: Record<InstallTab, string[]>;
+  alt: Record<InstallTab, string>;
+  supported: string;
+  exeTitle: string;
+  exeBody: string[];
+  open: string;
+}
+
+export interface PagesCopy {
+  back: string;
+  updated: string;
+  tocTitle: string;
+  highlightsTitle: string;
+  contact: { title: string; body: string; cta: string };
+  install: InstallPageCopy;
+  about: DocPage;
+  terms: DocPage;
+  privacy: DocPage;
 }
 
 export interface Feature {

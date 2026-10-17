@@ -1,0 +1,283 @@
+---
+/*
+ * Página de texto (Acerca de, Términos, Privacidad): título, introducción, ideas clave en una nota
+ * adhesiva, índice y secciones. El copy vive en src/i18n/pages-*.ts.
+ */
+import PageShell from "./PageShell.astro";
+import DrawnButton from "./DrawnButton.astro";
+import { LEGAL_UPDATED, LINKEDIN_URL, localizeUrl, type PageSlug } from "../config/site";
+import { getT, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+  slug: Exclude<PageSlug, "install">;
+}
+
+const { lang, slug } = Astro.props;
+const t = getT(lang).pages;
+const page = t[slug];
+const showMeta = slug === "terms" || slug === "privacy";
+const updated = new Intl.DateTimeFormat(lang, { dateStyle: "long", timeZone: "UTC" }).format(new Date(LEGAL_UPDATED));
+const sectionId = (i: number) => `s${i + 1}`;
+// Un índice solo ayuda cuando el texto es largo
+const toc = page.sections.length >= 6;
+---
+
+<PageShell lang={lang} {slug} title={page.title} description={page.intro}>
+  <article class="doc">
+    <header class="doc__head">
+      <h1 class="doc__title">{page.title}</h1>
+      <p class="doc__intro">{page.intro}</p>
+      {showMeta && (
+        <p class="doc__updated note">
+          {t.updated}: {updated}
+        </p>
+      )}
+    </header>
+
+    {page.highlights && (
+      <aside class="doc__sticky" aria-labelledby="doc-highlights">
+        <span class="doc__sticky-band" aria-hidden="true" />
+        <h2 class="doc__sticky-title" id="doc-highlights">
+          {t.highlightsTitle}
+        </h2>
+        <ul>
+          {page.highlights.map((h) => (
+            <li>{h}</li>
+          ))}
+        </ul>
+      </aside>
+    )}
+
+    {toc && (
+      <nav class="doc__toc" aria-labelledby="doc-toc">
+        <h2 class="doc__toc-title" id="doc-toc">
+          {t.tocTitle}
+        </h2>
+        <ol>
+          {page.sections.map((s, i) => (
+            <li>
+              <a href={`#${sectionId(i)}`}>{s.title}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    )}
+
+    {page.sections.map((s, i) => (
+      <section class="doc__section" id={sectionId(i)} aria-labelledby={`${sectionId(i)}-t`}>
+        <h2 class="doc__h2" id={`${sectionId(i)}-t`}>
+          {s.title}
+        </h2>
+        {s.paragraphs?.map((p) => (
+          <p>{p}</p>
+        ))}
+        {s.items && (
+          <ul>
+            {s.items.map((it) => (
+              <li>{it}</li>
+            ))}
+          </ul>
+        )}
+        {s.after?.map((p) => (
+          <p>{p}</p>
+        ))}
+        {s.link && (
+          <p class="doc__more">
+            <a href={localizeUrl(`/${s.link.to}/`, lang)}>{s.link.text} →</a>
+          </p>
+        )}
+      </section>
+    ))}
+
+    <section class="doc__section doc__contact" aria-labelledby="doc-contact">
+      <h2 class="doc__h2" id="doc-contact">
+        {t.contact.title}
+      </h2>
+      <p>{t.contact.body}</p>
+      <p>
+        <DrawnButton href={LINKEDIN_URL} variant="primary" rel="noopener">
+          {t.contact.cta}
+        </DrawnButton>
+      </p>
+    </section>
+
+    <p class="doc__back">
+      <DrawnButton href={`/${lang}/`} variant="secondary" size="lg">
+        {t.back}
+      </DrawnButton>
+    </p>
+  </article>
+</PageShell>
+
+<style>
+  .doc {
+    max-width: 760px;
+  }
+
+  .doc__title {
+    margin: 0 0 20px;
+    font-weight: 900;
+    font-size: clamp(40px, 6vw, 84px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
+  .doc__intro {
+    margin: 0 0 14px;
+    color: var(--text-secondary);
+    font-size: 21px;
+    line-height: 1.6;
+  }
+
+  .doc__updated {
+    margin: 0 0 40px;
+    font-size: 19px;
+  }
+
+  .doc__head {
+    margin-bottom: 40px;
+  }
+
+  /* Nota adhesiva con las ideas clave */
+  .doc__sticky {
+    position: relative;
+    margin: 0 0 48px;
+    padding: 50px 28px 26px;
+    border: 1.5px solid var(--text-primary);
+    border-radius: 6px;
+    background: var(--brand);
+    color: var(--text-primary);
+    transform: rotate(-0.6deg);
+    filter: drop-shadow(0 2px 1px rgba(80, 55, 20, 0.14)) drop-shadow(0 12px 10px rgba(80, 55, 20, 0.16));
+  }
+
+  .doc__sticky-band {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    border-radius: 4px 4px 0 0;
+    background: #f7d766;
+  }
+
+  .doc__sticky-title {
+    margin: 0 0 12px;
+    font-family: var(--font-hand);
+    font-weight: 400;
+    font-size: 30px;
+    line-height: 1.1;
+  }
+
+  .doc__sticky ul {
+    margin: 0;
+    padding-left: 22px;
+    font-family: var(--font-hand);
+    font-size: 21px;
+    line-height: 1.4;
+  }
+
+  .doc__sticky li + li {
+    margin-top: 6px;
+  }
+
+  .doc__toc {
+    margin: 0 0 48px;
+    padding: 22px 26px;
+    border: 2px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    background: var(--bg-panel);
+  }
+
+  .doc__toc-title {
+    margin: 0 0 10px;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-secondary);
+  }
+
+  .doc__toc ol {
+    margin: 0;
+    padding-left: 22px;
+    columns: 2;
+    column-gap: 40px;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+
+  .doc__toc li {
+    break-inside: avoid;
+    padding-block: 2px;
+  }
+
+  .doc__toc a {
+    color: var(--text-primary);
+    text-decoration-color: var(--brand-hover);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+
+  .doc__section {
+    margin-bottom: 44px;
+    scroll-margin-top: 110px;
+  }
+
+  .doc__h2 {
+    margin: 0 0 14px;
+    font-weight: 900;
+    font-size: clamp(26px, 3vw, 34px);
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .doc__section p,
+  .doc__section li {
+    font-size: 18px;
+    line-height: 1.7;
+  }
+
+  .doc__section p {
+    margin: 0 0 14px;
+  }
+
+  .doc__section ul {
+    margin: 0 0 14px;
+    padding-left: 24px;
+  }
+
+  .doc__section li + li {
+    margin-top: 10px;
+  }
+
+  .doc__section li::marker {
+    color: var(--text-accent);
+  }
+
+  .doc__more {
+    font-weight: 800;
+  }
+
+  .doc__more a {
+    color: var(--link);
+  }
+
+  .doc__back {
+    margin: 56px 0 0;
+  }
+
+  @media (max-width: 599.98px) {
+    .doc__intro {
+      font-size: 19px;
+    }
+
+    .doc__sticky {
+      padding: 46px 20px 22px;
+    }
+
+    .doc__toc ol {
+      columns: 1;
+    }
+  }
+</style>

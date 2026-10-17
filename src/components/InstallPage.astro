@@ -1,0 +1,301 @@
+---
+/*
+ * Instalar: de momento solo como PWA. Una ilustración por navegador (Chrome, Edge, Safari en iPad)
+ * con sus pasos en texto, y una nota que explica con palabras sencillas por qué todavía no hay .exe.
+ */
+import PageShell from "./PageShell.astro";
+import DrawnButton from "./DrawnButton.astro";
+import chromeEn from "../assets/landing/install/install-chrome-en.svg";
+import chromeEs from "../assets/landing/install/install-chrome-es.svg";
+import edgeEn from "../assets/landing/install/install-edge-en.svg";
+import edgeEs from "../assets/landing/install/install-edge-es.svg";
+import ipadEn from "../assets/landing/install/install-ipad-en.svg";
+import ipadEs from "../assets/landing/install/install-ipad-es.svg";
+import { APP_URL, localizeUrl } from "../config/site";
+import { getT, type InstallTab, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getT(lang).pages;
+const c = t.install;
+
+const images: Record<Lang, Record<InstallTab, { src: string; width: number; height: number }>> = {
+  en: {
+    chrome: { src: chromeEn.src, width: 1000, height: 640 },
+    edge: { src: edgeEn.src, width: 1000, height: 640 },
+    ipad: { src: ipadEn.src, width: 1000, height: 680 },
+  },
+  es: {
+    chrome: { src: chromeEs.src, width: 1000, height: 640 },
+    edge: { src: edgeEs.src, width: 1000, height: 640 },
+    ipad: { src: ipadEs.src, width: 1000, height: 680 },
+  },
+};
+const tabs: InstallTab[] = ["chrome", "edge", "ipad"];
+---
+
+<PageShell lang={lang} slug="install" title={c.title} description={c.intro}>
+  <article class="install" data-install>
+    <h1 class="install__title">{c.title}</h1>
+    <p class="install__intro">{c.intro}</p>
+
+    <div class="install__tabs" role="group" aria-label={c.tabsLabel} data-tabs>
+      {tabs.map((k) => (
+        <button class="install__tab" type="button" data-tab={k} aria-pressed={k === "chrome" ? "true" : "false"}>
+          {c.tabs[k]}
+        </button>
+      ))}
+    </div>
+
+    {tabs.map((k, i) => {
+      const img = images[lang][k];
+      return (
+        <section class="install__panel" data-panel={k} aria-label={c.tabs[k]}>
+          <figure class="install__figure">
+            <img
+              src={img.src}
+              width={img.width}
+              height={img.height}
+              alt={c.alt[k]}
+              loading={i === 0 ? "eager" : "lazy"}
+              decoding="async"
+            />
+          </figure>
+          <ol class="install__steps">
+            {c.steps[k].map((s) => (
+              <li>{s}</li>
+            ))}
+          </ol>
+        </section>
+      );
+    })}
+
+    <p class="install__supported note">{c.supported}</p>
+
+    <aside class="install__exe" aria-labelledby="exe-title">
+      <span class="install__exe-band" aria-hidden="true"></span>
+      <h2 class="install__exe-title" id="exe-title">
+        {c.exeTitle}
+      </h2>
+      {c.exeBody.map((p) => (
+        <p>{p}</p>
+      ))}
+    </aside>
+
+    <p class="install__actions">
+      <DrawnButton href={APP_URL} variant="primary" size="lg">
+        {c.open}
+      </DrawnButton>
+      <DrawnButton href={localizeUrl("/", lang)} variant="secondary" size="lg">
+        {t.back}
+      </DrawnButton>
+    </p>
+  </article>
+</PageShell>
+
+<script>
+  // Elige la pestaña según el dispositivo; con JS apagado se ven las tres ilustraciones seguidas
+  const root = document.querySelector<HTMLElement>("[data-install]");
+  if (root) {
+    root.classList.add("has-tabs");
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>("[data-tab]")];
+    const panels = [...root.querySelectorAll<HTMLElement>("[data-panel]")];
+    const show = (key: string) => {
+      for (const b of buttons) b.setAttribute("aria-pressed", String(b.dataset.tab === key));
+      for (const p of panels) p.hidden = p.dataset.panel !== key;
+    };
+    for (const b of buttons) b.addEventListener("click", () => show(b.dataset.tab ?? "chrome"));
+
+    const ua = navigator.userAgent;
+    const ipad = /iPad|iPhone/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    show(ipad ? "ipad" : /Edg\//.test(ua) ? "edge" : "chrome");
+  }
+</script>
+
+<style>
+  .install {
+    max-width: 1000px;
+  }
+
+  .install__title {
+    margin: 0 0 20px;
+    font-weight: 900;
+    font-size: clamp(40px, 6vw, 84px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+  }
+
+  .install__intro {
+    max-width: 760px;
+    margin: 0 0 36px;
+    color: var(--text-secondary);
+    font-size: 21px;
+    line-height: 1.6;
+  }
+
+  /* Sin JS las pestañas no sirven: se ven las tres ilustraciones */
+  .install__tabs {
+    display: none;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 28px;
+  }
+
+  .has-tabs .install__tabs {
+    display: flex;
+  }
+
+  .install__tab {
+    min-height: 44px;
+    padding: 0 20px;
+    border: 2px solid var(--border-ink);
+    border-radius: 999px;
+    background: var(--bg-canvas);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: background-color 150ms var(--ease-out);
+  }
+
+  .install__tab[aria-pressed="true"] {
+    background: var(--brand);
+  }
+
+  @media (hover: hover) {
+    .install__tab[aria-pressed="false"]:hover {
+      background: var(--selection-soft);
+    }
+  }
+
+  .install__panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 36px;
+    margin-bottom: 40px;
+  }
+
+  .install__panel[hidden] {
+    display: none;
+  }
+
+  .install__figure {
+    margin: 0;
+  }
+
+  .install__figure img {
+    width: 100%;
+    height: auto;
+  }
+
+  .install__steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+
+  .install__steps li {
+    position: relative;
+    margin: 0 0 18px;
+    padding-left: 54px;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.5;
+    counter-increment: step;
+  }
+
+  .install__steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: -2px;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 2px solid var(--border-ink);
+    border-radius: 50%;
+    background: var(--brand);
+    font-family: var(--font-hand);
+    font-size: 21px;
+    line-height: 1;
+  }
+
+  .install__supported {
+    margin: 0 0 56px;
+    font-size: 20px;
+  }
+
+  /* El .exe todavía no existe: una nota adhesiva lo explica */
+  .install__exe {
+    position: relative;
+    max-width: 720px;
+    margin: 0 0 56px;
+    padding: 56px 32px 30px;
+    border: 1.5px solid var(--text-primary);
+    border-radius: 6px;
+    background: var(--brand);
+    color: var(--text-primary);
+    transform: rotate(-0.8deg);
+    filter: drop-shadow(0 2px 1px rgba(80, 55, 20, 0.14)) drop-shadow(0 12px 10px rgba(80, 55, 20, 0.16));
+  }
+
+  .install__exe-band {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    border-radius: 4px 4px 0 0;
+    background: #f7d766;
+  }
+
+  .install__exe-title {
+    margin: 0 0 14px;
+    font-family: var(--font-hand);
+    font-weight: 400;
+    font-size: 32px;
+    line-height: 1.1;
+  }
+
+  .install__exe p {
+    margin: 0 0 12px;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+
+  .install__exe p:last-child {
+    margin-bottom: 0;
+  }
+
+  .install__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 20px;
+    margin: 0;
+  }
+
+  @media (max-width: 799.98px) {
+    .install__panel {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+  }
+
+  @media (max-width: 599.98px) {
+    .install__intro {
+      font-size: 19px;
+    }
+
+    .install__exe {
+      padding: 52px 22px 24px;
+    }
+  }
+</style>

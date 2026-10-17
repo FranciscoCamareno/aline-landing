@@ -1,0 +1,46 @@
+---
+/*
+ * Estructura común de las páginas interiores (Instalar, Acerca de, Términos, Privacidad):
+ * nav flotante, contenido y footer. Sin hilo de lápiz: solo existe en la portada.
+ */
+import Base from "../layouts/Base.astro";
+import Nav from "./Nav.astro";
+import Footer from "./Footer.astro";
+import type { PageSlug } from "../config/site";
+import type { Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+  slug: PageSlug;
+  title: string;
+  description: string;
+}
+
+const { lang, slug, title, description } = Astro.props;
+const path = `${slug}/`;
+---
+
+<Base lang={lang} {path} title={`${title} — aline`} {description} noindex thread={false}>
+  <Nav lang={lang} {path} />
+  <main class="shell">
+    <div class="container">
+      <slot />
+    </div>
+  </main>
+  <Footer lang={lang} {path} />
+</Base>
+
+<style>
+  .shell {
+    position: relative;
+    z-index: 1;
+    /* debajo del logo y de la libreta flotantes */
+    padding-block: 176px 120px;
+  }
+
+  @media (max-width: 599.98px) {
+    .shell {
+      padding-block: 150px 80px;
+    }
+  }
+</style>

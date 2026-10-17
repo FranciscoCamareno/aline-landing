@@ -30,8 +30,11 @@ export const PRIVACY_URL = "/privacy/";
 
 /** Redes del footer. */
 export const INSTAGRAM_URL = "#";
-export const LINKEDIN_URL = "#";
+export const LINKEDIN_URL = "https://www.linkedin.com/in/franciscocamareno/";
 export const GITHUB_URL = "#";
+
+/** Fecha de la última revisión de los textos legales (Términos y Privacidad), en ISO. */
+export const LEGAL_UPDATED = "2026-10-17";
 
 /** Dominio público, para canonical y hreflang. */
 export const SITE_URL = "https://aline.app";

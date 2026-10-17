@@ -1,6 +1,7 @@
 ---
 import type { GetStaticPaths } from "astro";
-import PlaceholderPage from "../../components/PlaceholderPage.astro";
+import DocPage from "../../components/DocPage.astro";
+import InstallPage from "../../components/InstallPage.astro";
 import { PAGE_SLUGS } from "../../config/site";
 import { LANGS } from "../../i18n";
 
@@ -14,4 +15,4 @@ export const getStaticPaths = (() =>
 const { lang, slug } = Astro.props;
 ---
 
-<PlaceholderPage lang={lang} slug={slug} />
+{slug === "install" ? <InstallPage lang={lang} /> : <DocPage lang={lang} slug={slug} />}
