@@ -56,22 +56,15 @@ export const threadConfig = {
     entry: 36,
     /** Hueco mínimo entre el texto y el bucle cuando el titular está pegado al borde. */
     minGap: 14,
+    /**
+     * Scroll que ocupa dibujar el bucle entero, en px: el círculo avanza en proporción al scroll
+     * dentro de ese tramo. Después, la salida y la bajada siguiente recuperan el desfase.
+     */
+    scrollSpan: 340,
   },
 
-  /**
-   * El lápiz persigue al punto que marca el scroll con velocidad propia: nunca salta, y los
-   * bucles se dibujan a ritmo de mano aunque el scroll vaya rápido o se quede quieto.
-   */
-  chase: {
-    /** Velocidad máxima en los tramos normales y dentro de los bucles, en px de trazo por segundo. */
-    speed: 2600,
-    loopSpeed: 760,
-    /** Aceleración máxima: arranca y frena suave. */
-    accel: 2400,
-    loopAccel: 900,
-    /** Tiempo de aproximación al objetivo cuando está cerca (suaviza el final). */
-    ease: 0.22,
-  },
+  /** Suavizado del trazo respecto al scroll, en segundos (tirones fuera, sin animar por su cuenta). */
+  smoothing: 0.12,
 
   /**
    * Lapicito: punta en (88, 10) de pencil-thread.svg (92×20). No sigue la tangente al 100 %

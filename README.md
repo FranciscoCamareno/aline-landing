@@ -53,7 +53,7 @@ Los tramos que cruzan de un lado a otro empiezan y terminan en el borde del cont
 
 Los titulares de `ways`, `pad` y `facts` quedan encerrados en un bucle a mano (superelipse irregular que se ensancha donde hay sitio y se endereza donde el titular está pegado al borde). Se ajusta en `loop` dentro de `thread.ts`.
 
-El lápiz no va pegado al scroll: lo persigue con velocidad y aceleración limitadas (`chase` en `thread.ts`). En los tramos normales alcanza rápido el punto del scroll; dentro de los bucles va a ritmo de mano (`loopSpeed`), aunque el scroll vaya más deprisa o se quede quieto.
+El trazo lo dicta el scroll en todo momento: si el scroll se para, el lápiz se para. Cada bucle ocupa su propio tramo de scroll (`loop.scrollSpan`), así el círculo avanza en proporción a lo que se scrollea; la salida y la bajada siguiente recuperan el desfase hasta volver a ir a la par con la página.
 
 ## Estructura
 

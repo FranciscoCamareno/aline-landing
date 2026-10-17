@@ -28,11 +28,11 @@ import { threadConfig as c } from "../config/thread";
 
   type Pt = { x: number; y: number };
   type Side = "l" | "r";
-  /** Un tramo de la ruta: su `d` sin el M inicial, dónde acaba y si es un bucle. */
+  /** Un tramo de la ruta: su `d` sin el M inicial, dónde acaba y qué es. */
   interface Piece {
     d: string;
     end: Pt;
-    loop: boolean;
+    kind: "line" | "loop" | "tail";
   }
 
   const svg = document.querySelector<SVGSVGElement>("[data-pencil-thread]");
@@ -42,14 +42,13 @@ import { threadConfig as c } from "../config/thread";
   const wide = window.matchMedia(`(min-width: ${c.minWidth}px)`);
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  // Tabla longitud ↔ y: cuánto trazo hay por encima de la línea de dibujo.
-  // Dentro de un bucle todas las muestras comparten la y de su inicio, así el bucle entero
-  // pasa a ser el objetivo en cuanto la línea de dibujo llega al titular.
+  // Tabla longitud ↔ y "de scroll": cuánto trazo hay dibujado para cada posición de la línea de
+  // dibujo. Casi siempre es la y real del trazo. Cada bucle recibe su propio tramo de scroll
+  // (loop.scrollSpan), así el círculo avanza al ritmo del scroll; después, la salida y la bajada
+  // siguiente reparten el resto hasta volver a ir a la par con la página.
   let total = 0;
   let lens: number[] = [];
   let ys: number[] = [];
-  /** Tramos de longitud que son bucles (para dibujarlos a ritmo de mano). */
-  let loopRanges: [number, number][] = [];
 
   const f = (n: number) => n.toFixed(1);
   const anchor = (name: string) => document.querySelector<HTMLElement>(`[data-thread-anchor="${name}"]`);
@@ -179,7 +178,7 @@ import { threadConfig as c } from "../config/thread";
       pieces.push({
         d: ` C${f(at.x + wig)} ${f(at.y + k)} ${f(to.x - wig)} ${f(to.y - k)} ${f(to.x)} ${f(to.y)}`,
         end: to,
-        loop: false,
+        kind: "line",
       });
       at = to;
     };
@@ -201,10 +200,10 @@ import { threadConfig as c } from "../config/thread";
       pieces.push({
         d: ` C${f(at.x)} ${f(at.y + k)} ${f(s.x - tin.x * kin)} ${f(s.y - tin.y * kin)} ${f(s.x)} ${f(s.y)}`,
         end: s,
-        loop: false,
+        kind: "line",
       });
       const e = pts[pts.length - 1]!;
-      pieces.push({ d: smooth(pts), end: e, loop: true });
+      pieces.push({ d: smooth(pts), end: e, kind: "loop" });
       // Salida: por encima del texto hasta el margen contrario, y de ahí hacia abajo
       const to: Pt = { x: X(from === "l" ? "r" : "l"), y: top - 6 };
       // Sigue la tangente del cierre pero casi en horizontal, para no subirse a la sección anterior
@@ -214,7 +213,7 @@ import { threadConfig as c } from "../config/thread";
       pieces.push({
         d: ` C${f(e.x + tout.x * kout)} ${f(e.y + tout.y * kout)} ${f(to.x)} ${f(to.y - 30)} ${f(to.x)} ${f(to.y)}`,
         end: to,
-        loop: false,
+        kind: "tail",
       });
       at = to;
     };
@@ -246,29 +245,49 @@ import { threadConfig as c } from "../config/thread";
     const head = `M${f(r.start.x)} ${f(r.start.y)}`;
     let from = r.start;
     let acc = 0;
-    const bounds: { from: number; to: number; loop: boolean }[] = [];
+    const bounds: { from: number; to: number; kind: Piece["kind"] }[] = [];
     for (const p of r.pieces) {
       path.setAttribute("d", `M${f(from.x)} ${f(from.y)}${p.d}`);
       const len = path.getTotalLength();
-      bounds.push({ from: acc, to: acc + len, loop: p.loop });
+      bounds.push({ from: acc, to: acc + len, kind: p.kind });
       acc += len;
       from = p.end;
     }
     path.setAttribute("d", head + r.pieces.map((p) => p.d).join(""));
     total = path.getTotalLength();
-    loopRanges = bounds.filter((b) => b.loop).map((b) => [b.from, b.to]);
 
     lens = [];
     ys = [];
     let maxY = -Infinity;
-    const n = Math.max(300, Math.round(total / 6));
+    const n = Math.max(400, Math.round(total / 5));
     let bi = 0;
+    // Bucle en curso: su y de inicio, su tramo de scroll y hasta dónde llega la recuperación
+    // (la salida y la bajada siguiente, que terminan en su y real)
+    let group: { i: number; y0: number; span: number; yEnd: number; from: number; to: number } | null = null;
     for (let i = 0; i <= n; i++) {
       const l = (total * i) / n;
       while (bi < bounds.length - 1 && l > bounds[bi]!.to) bi++;
       const piece = bounds[bi]!;
-      // En un bucle, la y no avanza: se queda en la de su inicio (ya alcanzada)
-      if (!piece.loop) maxY = Math.max(maxY, path.getPointAtLength(l).y);
+      let vy: number;
+      if (piece.kind === "loop") {
+        if (!group || group.i !== bi) {
+          const after: Piece = r.pieces[bi + 2] ?? r.pieces[bi + 1]!;
+          const yEnd: number = after.end.y;
+          const y0 = maxY;
+          const span = Math.min(c.loop.scrollSpan, Math.max(80, (yEnd - y0) * 0.6));
+          const last: { to: number } = bounds[Math.min(bounds.length - 1, bi + 2)]!;
+          group = { i: bi, y0, span, yEnd, from: piece.to, to: last.to };
+        }
+        // El círculo avanza en proporción al scroll dentro de su tramo
+        vy = group.y0 + (group.span * (l - piece.from)) / (piece.to - piece.from || 1);
+      } else if (group && l > group.from && l <= group.to) {
+        // Salida y bajada: reparten el scroll que queda hasta volver a ir a la par
+        const t = (l - group.from) / (group.to - group.from || 1);
+        vy = group.y0 + group.span + (group.yEnd - group.y0 - group.span) * t;
+      } else {
+        vy = path.getPointAtLength(l).y;
+      }
+      maxY = Math.max(maxY, vy);
       lens.push(l);
       ys.push(maxY);
     }
@@ -290,8 +309,6 @@ import { threadConfig as c } from "../config/thread";
     const t = (y - ys[lo]!) / (ys[hi]! - ys[lo]! || 1);
     return lens[lo]! + (lens[hi]! - lens[lo]!) * t;
   }
-
-  const inLoop = (len: number) => loopRanges.some(([a, b]) => len > a - 1 && len < b + 1);
 
   let angle: number = c.pencil.baseAngle;
   function placePencil(len: number, dt: number) {
@@ -322,7 +339,6 @@ import { threadConfig as c } from "../config/thread";
 
     let target = 0;
     let shown = 0;
-    let velocity = 0;
     let ready = false;
 
     const readTarget = () => {
@@ -336,7 +352,6 @@ import { threadConfig as c } from "../config/thread";
       path.style.strokeDasharray = `${total} ${total}`;
       readTarget();
       if (!ready) {
-        // Al cargar a media página no se redibuja todo desde arriba: arranca donde toca
         shown = target;
         ready = true;
       }
@@ -349,30 +364,18 @@ import { threadConfig as c } from "../config/thread";
     setup();
     ScrollTrigger.create({ start: 0, end: "max", onUpdate: readTarget });
 
-    // El lápiz persigue al objetivo con velocidad y aceleración limitadas: arranca y frena suave,
-    // y dentro de los bucles va a ritmo de mano aunque el scroll vaya por delante
+    // El trazo lo dicta el scroll: solo un suavizado mínimo para que no vaya a tirones.
+    // Si el scroll se detiene, el lápiz se detiene con él.
     gsap.ticker.add((_time, deltaMs) => {
       if (!ready || !path) return;
       const dt = Math.min(0.05, deltaMs / 1000);
       const diff = target - shown;
-      if (Math.abs(diff) < 0.5 && Math.abs(velocity) < 5) {
-        velocity = 0;
-        return;
+      if (Math.abs(diff) < 0.5) {
+        if (diff === 0) return;
+        shown = target;
+      } else {
+        shown += diff * (1 - Math.exp(-dt / c.smoothing));
       }
-      const looping = inLoop(shown);
-      const cap = looping ? c.chase.loopSpeed : c.chase.speed;
-      const accel = looping ? c.chase.loopAccel : c.chase.accel;
-      const want = Math.sign(diff) * Math.min(cap, Math.abs(diff) / c.chase.ease);
-      const dv = want - velocity;
-      velocity += Math.sign(dv) * Math.min(Math.abs(dv), accel * dt);
-      // Al entrar en un bucle desde un tramo rápido, frena hasta su velocidad
-      if (looping) velocity = Math.sign(velocity) * Math.min(Math.abs(velocity), cap);
-      let next = shown + velocity * dt;
-      if ((diff > 0 && next > target) || (diff < 0 && next < target)) {
-        next = target;
-        velocity = 0;
-      }
-      shown = Math.max(0, Math.min(total, next));
       path.style.strokeDashoffset = String(total - shown);
       placePencil(shown, dt);
     });
