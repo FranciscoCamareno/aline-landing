@@ -18,6 +18,10 @@ import { threadConfig as c } from "../config/thread";
     stroke-linecap="round"
     stroke-linejoin="round"
   ></path>
+</svg>
+<!-- El lapicito va en su propia capa, por encima de las secciones: la línea pasa por debajo del
+     contenido, pero el lápiz que la dibuja se ve siempre encima de letras y componentes -->
+<svg class="pencil-thread pencil-thread--pencil" aria-hidden="true" focusable="false" data-pencil-layer>
   <g data-thread-pencil style="visibility: hidden">
     <image href={pencilThread.src} width={c.pencil.width} height={c.pencil.height} />
   </g>
@@ -37,7 +41,8 @@ import { threadConfig as c } from "../config/thread";
 
   const svg = document.querySelector<SVGSVGElement>("[data-pencil-thread]");
   const path = svg?.querySelector<SVGPathElement>("[data-thread-path]");
-  const pencil = svg?.querySelector<SVGGElement>("[data-thread-pencil]");
+  const pencilLayer = document.querySelector<SVGSVGElement>("[data-pencil-layer]");
+  const pencil = pencilLayer?.querySelector<SVGGElement>("[data-thread-pencil]");
 
   const wide = window.matchMedia(`(min-width: ${c.minWidth}px)`);
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -236,10 +241,13 @@ import { threadConfig as c } from "../config/thread";
     if (!r) return false;
     const w = document.documentElement.clientWidth;
     const h = document.documentElement.scrollHeight;
-    svg.setAttribute("width", String(w));
-    svg.setAttribute("height", String(h));
-    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    svg.style.height = `${h}px`;
+    for (const layer of [svg, pencilLayer]) {
+      if (!layer) continue;
+      layer.setAttribute("width", String(w));
+      layer.setAttribute("height", String(h));
+      layer.setAttribute("viewBox", `0 0 ${w} ${h}`);
+      layer.style.height = `${h}px`;
+    }
 
     // Longitud de cada tramo, midiendo con la propia ruta
     const head = `M${f(r.start.x)} ${f(r.start.y)}`;

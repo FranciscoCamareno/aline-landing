@@ -168,6 +168,11 @@ a {
   z-index: 0;
 }
 
+/* El lapicito, encima de las secciones y por debajo del nav flotante */
+.pencil-thread--pencil {
+  z-index: 50;
+}
+
 @media (max-width: 959.98px) {
   .pencil-thread {
     display: none;
