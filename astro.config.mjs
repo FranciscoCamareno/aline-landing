@@ -17,6 +17,14 @@ export default defineConfig({
       redirectToDefaultLocale: false,
     },
   },
+  vite: {
+    optimizeDeps: {
+      // Se importan dinámicamente desde los scripts de las islas, así que Vite no las encuentra al
+      // arrancar: sin esto las descubre tarde, reoptimiza y deja cargas colgadas ("Failed to fetch
+      // dynamically imported module"), sobre todo si se ejecuta un build con `pnpm dev` abierto.
+      include: ["gsap", "gsap/ScrollTrigger", "gsap/DrawSVGPlugin", "perfect-freehand"],
+    },
+  },
   integrations: [
     sitemap({
       // /en/ y /es/ enlazadas entre sí con hreflang. Las páginas en blanco (noindex) quedan fuera:
