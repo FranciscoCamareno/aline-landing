@@ -1,0 +1,147 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+type Props = {
+  href?: string;
+  variant?: "primary" | "secondary";
+  size?: "md" | "lg";
+  as?: "a" | "button";
+  class?: string;
+} & Omit<HTMLAttributes<"a"> & HTMLAttributes<"button">, "class">;
+
+const { href, variant = "primary", size = "md", as = href ? "a" : "button", class: className, ...rest } = Astro.props;
+
+// Cada instancia necesita su propio clipPath.
+const clipId = `db-clip-${Math.random().toString(36).slice(2, 10)}`;
+
+const OUTLINE = "M6 9 C60 5 140 6 194 8 C196 22 195 38 193 49 C140 52 60 51 7 48 C5 36 4 20 6 9 Z";
+const OUTLINE_SOFT = "M9 7 C70 9 130 4 191 10 C194 24 197 40 195 47 C130 50 70 53 5 50 C6 34 7 18 9 7";
+const ZIGZAG =
+  "M-4 52 L8 2 L20 54 L32 2 L44 54 L56 2 L68 54 L80 2 L92 54 L104 2 L116 54 L128 2 L140 54 L152 2 L164 54 L176 2 L188 54 L200 2 L210 40";
+
+const Tag = as;
+---
+
+<Tag
+  class:list={["db", `db--${variant}`, `db--${size}`, className]}
+  href={as === "a" ? href : undefined}
+  type={as === "button" ? "button" : undefined}
+  {...rest}
+>
+  <svg class="db__art" viewBox="0 0 200 56" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+    <defs>
+      <clipPath id={clipId}><path d={OUTLINE}></path></clipPath>
+    </defs>
+    <g clip-path={`url(#${clipId})`}>
+      {variant === "primary" && <path class="db__fill db__fill--rest" d={ZIGZAG} pathLength="1" />}
+      <path class="db__fill db__fill--hover" d={ZIGZAG} pathLength="1"></path>
+    </g>
+    <path class="db__line" d={OUTLINE} vector-effect="non-scaling-stroke"></path>
+    <path class="db__line db__line--soft" d={OUTLINE_SOFT} vector-effect="non-scaling-stroke"></path>
+  </svg>
+  <span class="db__label"><slot /></span>
+</Tag>
+
+<style>
+  .db {
+    --db-hover: var(--secondary-soft);
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 22px;
+    border: 0;
+    background: none;
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+    font-weight: 800;
+    font-size: 16px;
+    line-height: 1.1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .db--lg {
+    min-height: 56px;
+    padding: 0 30px;
+    font-size: 18px;
+  }
+
+  .db--primary {
+    --db-hover: var(--brand-hover);
+  }
+
+  .db:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 5px;
+  }
+
+  .db:active {
+    transform: translateY(1px);
+  }
+
+  .db__art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .db__label {
+    position: relative;
+  }
+
+  .db__line {
+    fill: none;
+    stroke: var(--border-ink);
+    stroke-width: 2px;
+    stroke-linejoin: round;
+  }
+
+  .db__line--soft {
+    stroke-width: 1.2px;
+    stroke-opacity: 0.5;
+  }
+
+  .db__fill {
+    fill: none;
+    stroke-width: 16;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 1 2;
+  }
+
+  .db__fill--rest {
+    stroke: var(--brand);
+    stroke-dashoffset: 0;
+  }
+
+  /* El garabato colorea de izquierda a derecha */
+  .db__fill--hover {
+    stroke: var(--db-hover);
+    stroke-dashoffset: 1.02;
+    transition: stroke-dashoffset 550ms cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+  .db:focus-visible .db__fill--hover {
+    stroke-dashoffset: 0;
+  }
+
+  @media (hover: hover) {
+    .db:hover .db__fill--hover {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .db__fill--hover {
+      transition-duration: 1ms;
+    }
+  }
+</style>

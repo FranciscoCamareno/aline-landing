@@ -1,0 +1,49 @@
+:root {
+  /* Superficies */
+  --bg-canvas: #FFFDF4;        /* papel */
+  --bg-panel: #F8F2E1;         /* papel viejo */
+  --border-soft: #E8DFC6;      /* cartón */
+  --border-ink: #262118;       /* tinta */
+
+  /* Texto */
+  --text-primary: #262118;     /* tinta */
+  --text-secondary: #6B6250;   /* grafito */
+  --text-accent: #8A5A00;      /* ocre tinta: anotaciones a mano */
+
+  /* Marca */
+  --brand: #FFE380;            /* mantequilla */
+  --brand-hover: #F5C842;      /* yema */
+  --on-brand: #262118;
+  --selection-soft: #FFF6CC;   /* crema limón */
+
+  /* Secundario */
+  --secondary: #BFDFE2;        /* agua */
+  --secondary-soft: #DCEFF1;   /* agua clara */
+  --on-secondary: #24555C;
+  --focus: #3F7F88;            /* agua profunda: anillo de foco y enlaces */
+  --link: #3F7F88;
+
+  /* Stickers: SOLO decoración, nunca estados ni acciones */
+  --sticker-coral: #FF9B7A;
+  --sticker-rosa: #F7AFCB;
+  --sticker-brote: #A8D5A2;
+  --sticker-agua: #BFDFE2;
+  --wood: #F1D3A6;             /* madera del lápiz */
+
+  /* Tipografía */
+  --font-ui: "Nunito", system-ui, sans-serif;
+  --font-logo: "Cherry Bomb One", "Nunito", sans-serif;
+  --font-hand: "Excalifont", "Nunito", sans-serif;
+
+  /* Forma */
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --stroke: 2px;
+  --shadow-sticker: 0 3px 0 rgba(38, 33, 24, 0.14);
+  --shadow-lifted: 0 16px 28px rgba(38, 33, 24, 0.22), 0 2px 0 rgba(38, 33, 24, 0.10);
+
+  /* Movimiento */
+  --ease-out: cubic-bezier(.3, .7, .2, 1);
+  --ease-spring: cubic-bezier(.3, 1.4, .5, 1);
+}

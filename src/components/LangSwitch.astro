@@ -1,0 +1,59 @@
+---
+import { otherLang, type Lang } from "../i18n";
+import { getT } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const target = otherLang(lang);
+const t = getT(lang);
+---
+
+<a class="lang" href={`/${target}/`} hreflang={target} lang={target} data-lang={target} aria-label={t.lang.aria}>
+  <span class:list={["lang__opt", { "is-active": lang === "en" }]}>EN</span>
+  <span class="lang__sep" aria-hidden="true">/</span>
+  <span class:list={["lang__opt", { "is-active": lang === "es" }]}>ES</span>
+</a>
+
+<script>
+  const ONE_YEAR = 60 * 60 * 24 * 365;
+  for (const link of document.querySelectorAll<HTMLAnchorElement>("a.lang[data-lang]")) {
+    link.addEventListener("click", () => {
+      document.cookie = `lang=${link.dataset.lang}; Max-Age=${ONE_YEAR}; Path=/; SameSite=Lax`;
+    });
+  }
+</script>
+
+<style>
+  .lang {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 6px;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .lang__opt.is-active {
+    color: var(--text-primary);
+    font-weight: 900;
+  }
+
+  .lang__sep {
+    color: var(--border-soft);
+    font-weight: 600;
+  }
+
+  @media (hover: hover) {
+    .lang:hover .lang__opt:not(.is-active) {
+      color: var(--text-primary);
+    }
+  }
+</style>

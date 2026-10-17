@@ -1,0 +1,39 @@
+---
+import "../styles/global.css";
+import { SITE_URL } from "../config/site";
+import { LANGS, getT, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getT(lang);
+const canonical = new URL(`/${lang}/`, SITE_URL).href;
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{t.meta.title}</title>
+    <meta name="description" content={t.meta.description} />
+    <meta name="theme-color" content="#FFFDF4" />
+    <link rel="canonical" href={canonical} />
+    {LANGS.map((l) => <link rel="alternate" hreflang={l} href={new URL(`/${l}/`, SITE_URL).href} />)}
+    <link rel="alternate" hreflang="x-default" href={new URL("/", SITE_URL).href} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Solo las fuentes del hero: Nunito 900 (variable) y Excalifont -->
+    <link rel="preload" href="/fonts/nunito-latin-var.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/excalifont-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:title" content={t.meta.title} />
+    <meta property="og:description" content={t.meta.description} />
+    <meta property="og:locale" content={lang === "es" ? "es_ES" : "en_US"} />
+  </head>
+  <body>
+    <slot />
+    <!-- Fase 2: hilo de lápiz animado con scroll -->
+    <svg class="pencil-thread" aria-hidden="true" focusable="false" data-pencil-thread></svg>
+  </body>
+</html>

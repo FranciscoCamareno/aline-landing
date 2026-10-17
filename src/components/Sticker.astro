@@ -1,0 +1,375 @@
+---
+import sticker from "../assets/landing/logo/aline-sticker.svg";
+import stickerPeeling from "../assets/landing/logo/aline-sticker-peeling.svg";
+
+interface Props {
+  label: string;
+}
+
+const { label } = Astro.props;
+---
+
+<button class="sticker" type="button" aria-label={label} data-sticker>
+  <img class="sticker__img sticker__img--rest" src={sticker.src} width="140" height="60" alt="" draggable="false" />
+  <img class="sticker__img sticker__img--peel" src={stickerPeeling.src} width="140" height="60" alt="" draggable="false" />
+</button>
+
+<script>
+  const STORE_KEY = "aline.sticker";
+  const PEELED_KEY = "aline.sticker.peeled";
+  /** Margen transparente del SVG alrededor del sticker visible (140×60 → 132×52). */
+  const INSET = 4;
+  const EDGE = 8;
+  const DRAG_THRESHOLD = 5;
+  const RETURN_MS = 400;
+
+  type Saved = { x: number; y: number; rot: number };
+
+  const store = {
+    get<T>(key: string): T | null {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? (JSON.parse(raw) as T) : null;
+      } catch {
+        return null;
+      }
+    },
+    set(key: string, value: unknown) {
+      try {
+        if (value === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, JSON.stringify(value));
+      } catch {
+        /* sin almacenamiento: el sticker funciona igual, solo no recuerda */
+      }
+    },
+  };
+
+  const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
+
+  function init(el: HTMLButtonElement) {
+    const slot = el.closest<HTMLElement>("[data-sticker-slot]");
+    if (!slot) return;
+    const pencilLink = slot.querySelector<HTMLAnchorElement>("[data-sticker-under]");
+
+    let loose = false;
+    let x = 0;
+    let y = 0;
+    let rot = -4;
+    let scale = 1;
+    let returning = false;
+
+    // Arrastre
+    let pointerId: number | null = null;
+    let startX = 0;
+    let startY = 0;
+    let offX = 0;
+    let offY = 0;
+    let dragging = false;
+    let suppressClick = false;
+    let tilt = 0;
+    let tiltTarget = 0;
+    let raf = 0;
+
+    const size = () => ({ w: el.offsetWidth, h: el.offsetHeight });
+
+    function bounds() {
+      const { w, h } = size();
+      const vw = document.documentElement.clientWidth;
+      const vh = window.innerHeight;
+      return {
+        minX: EDGE - INSET,
+        minY: EDGE - INSET,
+        maxX: vw - w + INSET - EDGE,
+        maxY: vh - h + INSET - EDGE,
+      };
+    }
+
+    function render() {
+      el.style.transform = `rotate(${rot + tilt}deg) scale(${scale})`;
+      if (loose) {
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+      }
+    }
+
+    function setLoose(value: boolean) {
+      loose = value;
+      el.classList.toggle("is-loose", value);
+      if (pencilLink) pencilLink.tabIndex = value ? 0 : -1;
+      if (!value) {
+        el.style.left = "";
+        el.style.top = "";
+      }
+    }
+
+    function markPeeled() {
+      slot!.classList.add("is-peeled");
+      store.set(PEELED_KEY, true);
+    }
+
+    function save() {
+      store.set(STORE_KEY, loose ? ({ x, y, rot } satisfies Saved) : null);
+    }
+
+    /** Pasa de la ranura a position: fixed sin que se mueva en pantalla. */
+    function peel() {
+      if (loose) return;
+      const r = el.getBoundingClientRect();
+      // getBoundingClientRect incluye la rotación; el centro no cambia con ella.
+      const { w, h } = size();
+      x = r.left + r.width / 2 - w / 2;
+      y = r.top + r.height / 2 - h / 2;
+      el.style.transition = "none";
+      setLoose(true);
+      render();
+      markPeeled();
+    }
+
+    function moveTo(nx: number, ny: number) {
+      const b = bounds();
+      x = clamp(nx, b.minX, Math.max(b.minX, b.maxX));
+      y = clamp(ny, b.minY, Math.max(b.minY, b.maxY));
+    }
+
+    function settle() {
+      scale = 1;
+      tilt = 0;
+      tiltTarget = 0;
+      rot = Math.round((Math.random() * 16 - 8) * 10) / 10;
+      el.classList.remove("is-lifted");
+      el.style.transition = "";
+      el.classList.add("is-settling");
+      render();
+      save();
+    }
+
+    function stickBack() {
+      if (!loose || returning) return;
+      returning = true;
+      const slotRect = slot!.getBoundingClientRect();
+      x = slotRect.left - INSET;
+      y = slotRect.top - INSET;
+      rot = -4;
+      scale = 1;
+      tilt = 0;
+      el.classList.remove("is-lifted", "is-settling");
+      el.classList.add("is-returning");
+      render();
+      window.setTimeout(() => {
+        el.classList.remove("is-returning");
+        el.style.transition = "none";
+        setLoose(false);
+        render();
+        // fuerza el estilo antes de devolver las transiciones
+        void el.offsetWidth;
+        el.style.transition = "";
+        returning = false;
+        save();
+      }, RETURN_MS);
+    }
+
+    function tiltLoop() {
+      tilt += (tiltTarget - tilt) * 0.25;
+      tiltTarget *= 0.85;
+      render();
+      if (dragging) raf = requestAnimationFrame(tiltLoop);
+    }
+
+    el.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || returning) return;
+      pointerId = e.pointerId;
+      el.setPointerCapture(e.pointerId);
+      startX = e.clientX;
+      startY = e.clientY;
+      dragging = false;
+    });
+
+    el.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== pointerId) return;
+      if (!dragging) {
+        if (Math.hypot(e.clientX - startX, e.clientY - startY) <= DRAG_THRESHOLD) return;
+        peel();
+        offX = startX - x;
+        offY = startY - y;
+        dragging = true;
+        scale = 1.07;
+        el.classList.remove("is-settling");
+        el.classList.add("is-lifted");
+        el.style.transition = "none";
+        raf = requestAnimationFrame(tiltLoop);
+      }
+      tiltTarget = clamp(e.movementX * 1.4, -14, 14);
+      moveTo(e.clientX - offX, e.clientY - offY);
+    });
+
+    const endDrag = (e: PointerEvent) => {
+      if (e.pointerId !== pointerId) return;
+      pointerId = null;
+      if (!dragging) return;
+      dragging = false;
+      suppressClick = true;
+      cancelAnimationFrame(raf);
+      settle();
+    };
+    el.addEventListener("pointerup", endDrag);
+    el.addEventListener("pointercancel", endDrag);
+
+    el.addEventListener("click", () => {
+      if (suppressClick) {
+        suppressClick = false;
+        return;
+      }
+      if (!loose) {
+        const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+      }
+    });
+
+    el.addEventListener("dblclick", () => stickBack());
+
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (loose) {
+          e.preventDefault();
+          stickBack();
+        }
+        return;
+      }
+      const step = e.shiftKey ? 64 : 20;
+      const delta: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const d = delta[e.key];
+      if (!d || returning) return;
+      e.preventDefault();
+      if (!loose) {
+        peel();
+        rot = Math.round((Math.random() * 16 - 8) * 10) / 10;
+      }
+      el.style.transition = "";
+      el.classList.add("is-settling");
+      moveTo(x + d[0], y + d[1]);
+      render();
+      save();
+    });
+
+    window.addEventListener("resize", () => {
+      if (!loose || dragging || returning) return;
+      moveTo(x, y);
+      render();
+      save();
+    });
+
+    // Estado inicial
+    if (store.get<boolean>(PEELED_KEY)) slot.classList.add("is-peeled");
+    const saved = store.get<Saved>(STORE_KEY);
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+      const b = bounds();
+      const fits = saved.x >= b.minX && saved.x <= b.maxX && saved.y >= b.minY && saved.y <= b.maxY;
+      if (fits) {
+        x = saved.x;
+        y = saved.y;
+        rot = Number.isFinite(saved.rot) ? saved.rot : 0;
+        el.style.transition = "none";
+        setLoose(true);
+        render();
+        void el.offsetWidth;
+        el.style.transition = "";
+      } else {
+        store.set(STORE_KEY, null);
+        setLoose(false);
+        render();
+      }
+    } else {
+      setLoose(false);
+      render();
+    }
+    el.classList.add("is-ready");
+  }
+
+  for (const el of document.querySelectorAll<HTMLButtonElement>("[data-sticker]")) init(el);
+</script>
+
+<style>
+  .sticker {
+    position: absolute;
+    left: -4px;
+    top: -4px;
+    z-index: 2;
+    width: 140px;
+    height: 60px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: none;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transform: rotate(-4deg);
+    transform-origin: 50% 50%;
+  }
+
+  .sticker.is-loose {
+    position: fixed;
+    /* por encima de todo el contenido de la página */
+    z-index: 2147483000;
+  }
+
+  .sticker.is-lifted {
+    cursor: grabbing;
+  }
+
+  .sticker.is-settling {
+    transition: transform 420ms var(--ease-spring), left 220ms var(--ease-out), top 220ms var(--ease-out);
+  }
+
+  .sticker.is-returning {
+    transition:
+      transform 400ms var(--ease-out),
+      left 400ms var(--ease-out),
+      top 400ms var(--ease-out);
+  }
+
+  .sticker:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+
+  .sticker__img {
+    position: absolute;
+    inset: 0;
+    width: 140px;
+    height: 60px;
+    max-width: none;
+    pointer-events: none;
+    /* Equivalentes en drop-shadow de --shadow-sticker y --shadow-lifted,
+       para que la sombra siga la esquina doblada */
+    filter: drop-shadow(0 3px 0 rgba(38, 33, 24, 0.14));
+    transition: filter 200ms var(--ease-out);
+  }
+
+  .sticker__img--peel {
+    visibility: hidden;
+  }
+
+  .sticker.is-lifted .sticker__img--rest {
+    visibility: hidden;
+  }
+
+  .sticker.is-lifted .sticker__img--peel {
+    visibility: visible;
+    filter: drop-shadow(0 16px 14px rgba(38, 33, 24, 0.22)) drop-shadow(0 2px 0 rgba(38, 33, 24, 0.1));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sticker.is-settling,
+    .sticker.is-returning {
+      transition-duration: 1ms;
+    }
+  }
+</style>
