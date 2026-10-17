@@ -19,8 +19,10 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      // Solo /en/ y /es/, enlazadas entre sí con hreflang
-      filter: (page) => page !== `${site}/`,
+      // /en/ y /es/ enlazadas entre sí con hreflang. Las páginas en blanco (noindex) quedan fuera:
+      // quita su slug de esta lista cuando tengan diseño y contenido propios.
+      filter: (page) =>
+        page !== `${site}/` && !["install", "about", "terms", "privacy"].some((p) => page.includes(`/${p}/`)),
       i18n: { defaultLocale: "en", locales: { en: "en", es: "es" } },
     }),
   ],

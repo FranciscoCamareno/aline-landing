@@ -3,8 +3,10 @@
  * Sticker despegable, reutilizable (el logo del nav y la "a" del footer usan este mismo código).
  *
  * Pegado vive dentro de su contenedor [data-sticker-slot] y vuelve al centro de su
- * [data-sticker-die]. Despegado pasa a position: fixed, así que ningún ancestro suyo puede llevar
- * transform, filter ni rotate. La posición y el tamaño pegado los pone el componente padre con `class`.
+ * [data-sticker-die]. Al despegarlo se mueve a <body> y queda anclado a la PÁGINA (position:
+ * absolute en coordenadas del documento): se queda donde se soltó y se va con el scroll. Para
+ * volver a verlo hay que ir a esa sección; con doble clic o Escape vuela de vuelta a su ranura.
+ * La posición y el tamaño pegado los pone el componente padre con `class`.
  */
 interface Props {
   /** aria-label traducido: explica el arrastre, las flechas y cómo devolverlo. */
@@ -61,24 +63,17 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
   <img class="sticker__img sticker__img--rest" src={rest} width={width} height={height} alt="" draggable="false" />
   <img class="sticker__img sticker__img--peel" src={peel} width={width} height={height} alt="" draggable="false" />
 </button>
-<!-- Aplica la posición guardada antes del primer pintado: sin esto, el sticker (y el aviso del nav)
-     se verían un instante en su ranura hasta que carga la isla -->
+<!-- Antes del primer pintado: si hay una posición guardada, oculta el sticker (y el aviso de su
+     ranura) hasta que carga la isla y lo coloca, así no se ve un instante en su ranura -->
 <script is:inline>
   (function () {
     const el = document.currentScript.previousElementSibling;
     try {
       const s = JSON.parse(localStorage.getItem(el.dataset.key) || "null");
       if (!s || !isFinite(s.x) || !isFinite(s.y)) return;
-      const inset = el.offsetWidth * (parseFloat(el.dataset.inset) || 0);
-      const maxX = document.documentElement.clientWidth - el.offsetWidth + inset - 8;
-      const maxY = window.innerHeight - el.offsetHeight + inset - 8;
-      if (s.x < 8 - inset || s.y < 8 - inset || s.x > maxX || s.y > maxY) return;
+      el.classList.add("is-pending");
       const slot = el.closest("[data-sticker-slot]");
       if (slot) slot.classList.add("is-peeled");
-      el.classList.add("is-loose");
-      el.style.left = s.x + "px";
-      el.style.top = s.y + "px";
-      el.style.transform = "rotate(" + (isFinite(s.rot) ? s.rot : 0) + "deg) scale(1)";
     } catch {
       /* sin almacenamiento: se queda en su ranura */
     }
@@ -89,6 +84,9 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
   const EDGE = 8;
   const DRAG_THRESHOLD = 5;
   const RETURN_MS = 400;
+  /** Cerca del borde de la ventana, arrastrar desplaza la página. */
+  const SCROLL_ZONE = 72;
+  const SCROLL_MAX = 18;
 
   type Saved = { x: number; y: number; rot: number };
 
@@ -124,20 +122,29 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
     // A dónde vuelve: el centro de su ranura (el troquel en el nav, la marca en el footer)
     const die = slot.querySelector<HTMLElement>("[data-sticker-die]") ?? slot;
     const underLink = slot.querySelector<HTMLAnchorElement>("[data-sticker-under]");
+    // Su sitio en el DOM: suelto vive en <body>; al volver se devuelve aquí
+    const home = el.parentElement!;
+    const homeNext = el.nextSibling;
 
     let loose = false;
+    /** Suelto: coordenadas del documento. Volando de vuelta: coordenadas de la ventana. */
     let x = 0;
     let y = 0;
     let rot = DOCK_ROT;
     let scale = 1;
     let returning = false;
+    /** Posición guardada, para recolocarla cuando termine de cargar la página. */
+    let restore: Saved | null = null;
+    let touched = false;
 
     // Arrastre
     let pointerId: number | null = null;
-    let startX = 0;
-    let startY = 0;
+    let startDocX = 0;
+    let startDocY = 0;
     let offX = 0;
     let offY = 0;
+    let lastClientX = 0;
+    let lastClientY = 0;
     let dragging = false;
     let suppressClick = false;
     let tilt = 0;
@@ -147,16 +154,18 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
     const size = () => ({ w: el.offsetWidth, h: el.offsetHeight });
     const inset = () => el.offsetWidth * INSET_RATIO;
 
+    /** Límites de la página (no de la ventana): el sticker no sale del documento. */
     function bounds() {
       const { w, h } = size();
-      const INSET = inset();
-      const vw = document.documentElement.clientWidth;
-      const vh = window.innerHeight;
+      const inn = inset();
+      const pw = document.documentElement.clientWidth;
+      // body, no scrollHeight: el propio sticker (girado) no debe hacer crecer la página
+      const ph = Math.max(document.body.offsetHeight, window.innerHeight);
       return {
-        minX: EDGE - INSET,
-        minY: EDGE - INSET,
-        maxX: vw - w + INSET - EDGE,
-        maxY: vh - h + INSET - EDGE,
+        minX: EDGE - inn,
+        minY: EDGE - inn,
+        maxX: pw - w + inn - EDGE,
+        maxY: ph - h + inn - EDGE,
       };
     }
 
@@ -166,6 +175,27 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
         el.style.left = `${x}px`;
         el.style.top = `${y}px`;
       }
+    }
+
+    /** Mover un elemento en el DOM le quita el foco: se lo devolvemos. */
+    function reparent(move: () => void) {
+      const hadFocus = document.activeElement === el;
+      move();
+      if (hadFocus) el.focus({ preventScroll: true });
+    }
+
+    /** De su ranura a <body>, anclado a la página. Fija su tamaño: el pegado lo da el padre. */
+    function toPage() {
+      const { w, h } = size();
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+      reparent(() => document.body.appendChild(el));
+    }
+
+    function toHome() {
+      reparent(() => home.insertBefore(el, homeNext));
+      el.style.width = "";
+      el.style.height = "";
     }
 
     function setLoose(value: boolean) {
@@ -187,15 +217,17 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
       store.set(STORE_KEY, loose ? ({ x, y, rot } satisfies Saved) : null);
     }
 
-    /** Pasa de la ranura a position: fixed sin que se mueva en pantalla. */
+    /** Pasa de la ranura a la página sin que se mueva en pantalla. */
     function peel() {
       if (loose) return;
+      touched = true;
       const r = el.getBoundingClientRect();
       // getBoundingClientRect incluye la rotación; el centro no cambia con ella.
       const { w, h } = size();
-      x = r.left + r.width / 2 - w / 2;
-      y = r.top + r.height / 2 - h / 2;
+      x = r.left + r.width / 2 - w / 2 + window.scrollX;
+      y = r.top + r.height / 2 - h / 2 + window.scrollY;
       el.style.transition = "none";
+      toPage();
       setLoose(true);
       render();
       markPeeled();
@@ -205,6 +237,16 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
       const b = bounds();
       x = clamp(nx, b.minX, Math.max(b.minX, b.maxX));
       y = clamp(ny, b.minY, Math.max(b.minY, b.maxY));
+    }
+
+    /** Con el teclado, la página se desplaza lo justo para no perderlo de vista. */
+    function keepInView() {
+      const { h } = size();
+      const top = y - window.scrollY;
+      const margin = 16;
+      if (top < margin) window.scrollBy({ top: top - margin, behavior: "instant" });
+      else if (top + h > window.innerHeight - margin)
+        window.scrollBy({ top: top + h - (window.innerHeight - margin), behavior: "instant" });
     }
 
     function settle() {
@@ -222,7 +264,16 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
     function stickBack() {
       if (!loose || returning) return;
       returning = true;
-      // Centro de la ranura (el giro no mueve el centro del rectángulo)
+      touched = true;
+      // Vuela en coordenadas de la ventana: desde donde está ahora hasta el centro de su ranura
+      el.style.transition = "none";
+      el.classList.remove("is-lifted", "is-settling");
+      el.classList.add("is-returning");
+      x -= window.scrollX;
+      y -= window.scrollY;
+      render();
+      void el.offsetWidth;
+      el.style.transition = "";
       const r = die.getBoundingClientRect();
       const { w, h } = size();
       x = r.left + r.width / 2 - w / 2;
@@ -230,12 +281,11 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
       rot = DOCK_ROT;
       scale = 1;
       tilt = 0;
-      el.classList.remove("is-lifted", "is-settling");
-      el.classList.add("is-returning");
       render();
       window.setTimeout(() => {
         el.classList.remove("is-returning");
         el.style.transition = "none";
+        toHome();
         setLoose(false);
         render();
         // fuerza el estilo antes de devolver las transiciones
@@ -246,38 +296,55 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
       }, RETURN_MS);
     }
 
-    function tiltLoop() {
+    /** Un fotograma de arrastre: autoscroll en los bordes y posición según puntero + scroll. */
+    function dragFrame() {
+      const zone = SCROLL_ZONE;
+      let dy = 0;
+      if (lastClientY < zone) dy = -SCROLL_MAX * Math.min(1, 1 - lastClientY / zone);
+      else if (lastClientY > window.innerHeight - zone)
+        dy = SCROLL_MAX * Math.min(1, 1 - (window.innerHeight - lastClientY) / zone);
+      if (dy) window.scrollBy({ top: dy, behavior: "instant" });
+      // El puntero va en coordenadas de ventana; el sticker, en las del documento
+      moveTo(lastClientX + window.scrollX - offX, lastClientY + window.scrollY - offY);
       tilt += (tiltTarget - tilt) * 0.25;
       tiltTarget *= 0.85;
       render();
-      if (dragging) raf = requestAnimationFrame(tiltLoop);
+      if (dragging) raf = requestAnimationFrame(dragFrame);
     }
 
     el.addEventListener("pointerdown", (e) => {
       if (e.button !== 0 || returning) return;
       pointerId = e.pointerId;
       el.setPointerCapture(e.pointerId);
-      startX = e.clientX;
-      startY = e.clientY;
+      startDocX = e.clientX + window.scrollX;
+      startDocY = e.clientY + window.scrollY;
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
       dragging = false;
     });
 
     el.addEventListener("pointermove", (e) => {
       if (e.pointerId !== pointerId) return;
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
       if (!dragging) {
-        if (Math.hypot(e.clientX - startX, e.clientY - startY) <= DRAG_THRESHOLD) return;
+        const moved = Math.hypot(e.clientX + window.scrollX - startDocX, e.clientY + window.scrollY - startDocY);
+        if (moved <= DRAG_THRESHOLD) return;
         peel();
-        offX = startX - x;
-        offY = startY - y;
+        touched = true;
+        // Mover el nodo suelta la captura del puntero: se vuelve a tomar
+        if (pointerId !== null) el.setPointerCapture(pointerId);
+        offX = startDocX - x;
+        offY = startDocY - y;
         dragging = true;
         scale = 1.07;
         el.classList.remove("is-settling");
         el.classList.add("is-lifted");
         el.style.transition = "none";
-        raf = requestAnimationFrame(tiltLoop);
+        raf = requestAnimationFrame(dragFrame);
       }
       tiltTarget = clamp(e.movementX * 1.4, -14, 14);
-      moveTo(e.clientX - offX, e.clientY - offY);
+      moveTo(e.clientX + window.scrollX - offX, e.clientY + window.scrollY - offY);
     });
 
     const endDrag = (e: PointerEvent) => {
@@ -323,6 +390,7 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
       const d = delta[e.key];
       if (!d || returning) return;
       e.preventDefault();
+      touched = true;
       if (!loose) {
         peel();
         rot = randomTilt();
@@ -331,6 +399,7 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
       el.classList.add("is-settling");
       moveTo(x + d[0], y + d[1]);
       render();
+      keepInView();
       save();
     });
 
@@ -344,28 +413,31 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
     // Estado inicial
     const saved = store.get<Saved>(STORE_KEY);
     if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
-      const b = bounds();
-      const fits = saved.x >= b.minX && saved.x <= b.maxX && saved.y >= b.minY && saved.y <= b.maxY;
-      if (fits) {
-        x = saved.x;
-        y = saved.y;
-        rot = Number.isFinite(saved.rot) ? saved.rot : 0;
-        el.style.transition = "none";
-        setLoose(true);
-        markPeeled();
-        render();
-        void el.offsetWidth;
-        el.style.transition = "";
-      } else {
-        store.set(STORE_KEY, null);
-        setLoose(false);
-        render();
-      }
+      restore = saved;
+      rot = Number.isFinite(saved.rot) ? saved.rot : 0;
+      el.style.transition = "none";
+      toPage();
+      setLoose(true);
+      moveTo(saved.x, saved.y);
+      render();
+      markPeeled();
+      void el.offsetWidth;
+      el.style.transition = "";
     } else {
       setLoose(false);
       render();
     }
+    el.classList.remove("is-pending");
     el.classList.add("is-ready");
+
+    // La página crece al cargar fuentes e imágenes: se recoloca en su sitio guardado
+    const reapply = () => {
+      if (!restore || !loose || touched || dragging || returning) return;
+      moveTo(restore.x, restore.y);
+      render();
+    };
+    window.addEventListener("load", reapply);
+    void document.fonts?.ready.then(reapply);
   }
 
   for (const el of document.querySelectorAll<HTMLButtonElement>("[data-sticker]")) init(el);
@@ -389,8 +461,13 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
     transform-origin: 50% 50%;
   }
 
+  .sticker.is-pending {
+    visibility: hidden;
+  }
+
+  /* Suelto: anclado a la página (hijo de <body>, absolute en coordenadas del documento) */
   .sticker.is-loose {
-    position: fixed;
+    position: absolute;
     /* por encima de todo el contenido de la página */
     z-index: 2147483000;
   }
@@ -406,7 +483,9 @@ const vars = `--sticker-rot: ${rotate}deg; --sticker-shadow: ${shadow}; --sticke
       top 220ms var(--ease-out);
   }
 
+  /* De vuelta a su ranura vuela en coordenadas de la ventana */
   .sticker.is-returning {
+    position: fixed;
     transition:
       transform 400ms var(--ease-out),
       left 400ms var(--ease-out),

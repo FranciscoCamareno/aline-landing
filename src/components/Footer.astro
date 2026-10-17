@@ -14,14 +14,24 @@ import stickerPeel from "../assets/landing/logo/sticker-a-peeling.png";
 import instagramIcon from "../assets/landing/icons/social/instagram.svg?raw";
 import linkedinIcon from "../assets/landing/icons/social/linkedin.svg?raw";
 import githubIcon from "../assets/landing/icons/social/github.svg?raw";
-import { ABOUT_URL, GITHUB_URL, INSTAGRAM_URL, LINKEDIN_URL, PRIVACY_URL, TERMS_URL } from "../config/site";
+import {
+  ABOUT_URL,
+  GITHUB_URL,
+  INSTAGRAM_URL,
+  LINKEDIN_URL,
+  PRIVACY_URL,
+  TERMS_URL,
+  localizeUrl,
+} from "../config/site";
 import { getT, type Lang } from "../i18n";
 
 interface Props {
   lang: Lang;
+  /** Página actual dentro del idioma ("install/"); vacío en la portada. */
+  path?: string;
 }
 
-const { lang } = Astro.props;
+const { lang, path = "" } = Astro.props;
 const t = getT(lang);
 
 // Las PNG son de 512px; se muestran a 150px (300px para pantallas densas)
@@ -45,7 +55,7 @@ const socials = [
           <h2 class="foot-col__title">aline</h2>
           <ul>
             <li>
-              <a href={ABOUT_URL}>{t.footer.about}</a>
+              <a href={localizeUrl(ABOUT_URL, lang)}>{t.footer.about}</a>
             </li>
           </ul>
         </div>
@@ -53,10 +63,10 @@ const socials = [
           <h2 class="foot-col__title">{t.footer.legal}</h2>
           <ul>
             <li>
-              <a href={TERMS_URL}>{t.footer.terms}</a>
+              <a href={localizeUrl(TERMS_URL, lang)}>{t.footer.terms}</a>
             </li>
             <li>
-              <a href={PRIVACY_URL}>{t.footer.privacy}</a>
+              <a href={localizeUrl(PRIVACY_URL, lang)}>{t.footer.privacy}</a>
             </li>
           </ul>
         </div>
@@ -72,7 +82,7 @@ const socials = [
           ))}
         </ul>
         <p class="foot-brand__meta">
-          <LangSwitch lang={lang} variant="dark" />
+          <LangSwitch lang={lang} variant="dark" {path} />
           <span>{t.footer.copyright}</span>
         </p>
       </div>

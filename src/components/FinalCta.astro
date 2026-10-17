@@ -1,7 +1,7 @@
 ---
 /* Eco estático del hero: misma primera palabra y sufijo, sin animación. Aquí termina el hilo. */
 import DrawnButton from "./DrawnButton.astro";
-import { APP_URL, INSTALL_URL } from "../config/site";
+import { APP_URL, INSTALL_URL, localizeUrl } from "../config/site";
 import { getT, type Lang } from "../i18n";
 
 interface Props {
@@ -32,7 +32,7 @@ const HIGHLIGHT = "M6 12 C 50 6, 140 8, 194 10 C 198 18, 197 28, 192 32 C 140 36
       <DrawnButton href={APP_URL} variant="primary" size="lg">
         {t.cta.open}
       </DrawnButton>
-      <DrawnButton href={INSTALL_URL} variant="secondary" size="lg">
+      <DrawnButton href={localizeUrl(INSTALL_URL, lang)} variant="secondary" size="lg">
         {t.cta.installApp}
       </DrawnButton>
     </div>

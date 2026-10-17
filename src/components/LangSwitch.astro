@@ -6,16 +6,18 @@ interface Props {
   lang: Lang;
   /** "hand": escrito a mano en la hoja de libreta del nav. "dark": sobre la tinta del footer. */
   variant?: "ui" | "hand" | "dark";
+  /** Página actual dentro del idioma ("install/"): el cambio de idioma lleva a la misma página. */
+  path?: string;
 }
 
-const { lang, variant = "ui" } = Astro.props;
+const { lang, variant = "ui", path = "" } = Astro.props;
 const target = otherLang(lang);
 const t = getT(lang);
 ---
 
 <a
   class:list={["lang", `lang--${variant}`]}
-  href={`/${target}/`}
+  href={`/${target}/${path}`}
   hreflang={target}
   lang={target}
   data-lang={target}

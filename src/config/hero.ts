@@ -20,7 +20,7 @@ export const heroConfig = {
   baseline: 0.68,
   timings: {
     // ~1.4× más lento que el brief original
-    pause: 500,
+    pause: 650,
     writeBase: 450,
     writePerLetter: 140,
     highlight: 530,
@@ -36,6 +36,12 @@ export const heroConfig = {
    * en fracciones del alto de la palabra (x hacia la derecha, y hacia abajo desde la línea).
    */
   away: { x: 0.3, y: 0.1 },
+  /**
+   * Reposo del lápiz entre palabra y palabra, en fracciones del alto de la palabra: x desde el
+   * borde izquierdo del hueco (negativo = fuera, a la izquierda) e y desde la línea de escritura
+   * (negativo = encima). Es el mismo para todas las palabras, así el lápiz nunca salta.
+   */
+  rest: { x: -0.2, y: -0.3 },
   /** Movimiento del lápiz al escribir: fracción del ancho / alto de la palabra. */
   wobble: { x: 0.012, y: 0.08 },
 } as const;

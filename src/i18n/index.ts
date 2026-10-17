@@ -79,6 +79,14 @@ export interface Dict {
     excalidraw: Fact;
     languages: Fact;
   };
+  pages: {
+    soon: string;
+    back: string;
+    install: PageCopy;
+    about: PageCopy;
+    terms: PageCopy;
+    privacy: PageCopy;
+  };
   footer: {
     navAria: string;
     about: string;
@@ -88,6 +96,11 @@ export interface Dict {
     copyright: string;
     stickerAria: string;
   };
+}
+
+export interface PageCopy {
+  title: string;
+  body: string;
 }
 
 export interface Feature {

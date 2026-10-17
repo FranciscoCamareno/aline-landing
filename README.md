@@ -28,7 +28,7 @@ pnpm aplica una edad mínima de publicación a las dependencias: si un `pnpm add
 
 | Qué | Dónde |
 |---|---|
-| URLs de "Open aline" e "Install" | `src/config/site.ts` (`APP_URL`, `INSTALL_URL`) |
+| URLs de "Open aline" e "Install" | `src/config/site.ts` (`APP_URL`, `INSTALL_URL`). Un valor que empieza por `/` es una página interna y recibe el idioma (`/install/` → `/en/install/`); cualquier otra cosa se usa tal cual |
 | URLs del footer y redes | `src/config/site.ts` (`ABOUT_URL`, `TERMS_URL`, `PRIVACY_URL`, `INSTAGRAM_URL`, `LINKEDIN_URL`, `GITHUB_URL`) |
 | Hoja de libreta del nav: cuándo vuelve | `src/config/site.ts` → `NAV_PAPER_RETURN` (`"top"` o `"scrollUp"`) |
 | Tiempos de la animación del hero | `src/config/hero.ts` → `timings` |
@@ -62,7 +62,8 @@ El trazo lo dicta el scroll en todo momento: si el scroll se para, el lápiz se 
 - `src/components/ProductPeek.astro`: vista previa de la app en HTML (`role="img"`). Por debajo de 960px hace scroll horizontal.
 - `src/components/Features.astro`, `Facts.astro`, `FinalCta.astro`: el resto de secciones.
 - `src/components/Footer.astro`: footer oscuro (tokens `--dark-*`), con el logotipo gigante cortado por el borde y el sticker de la "a" despegable.
-- `src/components/Sticker.astro`: sticker despegable reutilizable (lo usan el logo del nav y la "a" del footer). Opciones: imágenes en reposo y al arrastrar, giro, clave de `localStorage`, margen transparente y acción al hacer clic. Vuelve al centro del `[data-sticker-die]` de su `[data-sticker-slot]`; ningún ancestro suyo puede llevar `transform`, `filter` ni `rotate`.
+- `src/components/PlaceholderPage.astro` + `src/pages/[lang]/[slug].astro`: páginas en blanco de Instalar, Acerca de, Términos y Privacidad (`/{idioma}/install/`, `about`, `terms`, `privacy`, con el mismo slug en los dos idiomas). Llevan nav y footer, `noindex` y no están en el sitemap: cuando una tenga diseño propio, quita su slug de `filter` en `astro.config.mjs`. Copy en `pages` de `src/i18n/`.
+- `src/components/Sticker.astro`: sticker despegable reutilizable (lo usan el logo del nav y la "a" del footer). Opciones: imágenes en reposo y al arrastrar, giro, clave de `localStorage`, margen transparente y acción al hacer clic. Al despegarlo pasa a `<body>` y queda anclado a la página (se va con el scroll; arrastrar cerca del borde de la ventana desplaza la página). Con doble clic o Escape vuela al centro del `[data-sticker-die]` de su `[data-sticker-slot]`.
 - `src/components/DrawingPad.astro`: bloc de dibujo con dos canvas (resaltador con `multiply` debajo, lápiz encima) y trazos guardados como datos. `perfect-freehand` se carga al acercarse. Con puntero grueso arranca bloqueado ("Toca para dibujar").
 - `src/components/PencilThread.astro`: el hilo de lápiz. La ruta se calcula en JS a partir de las anclas; GSAP (ScrollTrigger + DrawSVG) se carga al acercarse. No se muestra por debajo de 960px.
 - `src/components/DrawnButton.astro`, `Nav.astro`, `LangSwitch.astro`: botón dibujado, nav flotante y cambio de idioma.

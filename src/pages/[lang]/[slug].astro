@@ -1,0 +1,17 @@
+---
+import type { GetStaticPaths } from "astro";
+import PlaceholderPage from "../../components/PlaceholderPage.astro";
+import { PAGE_SLUGS } from "../../config/site";
+import { LANGS } from "../../i18n";
+
+// /en/install/, /es/install/, /en/about/… Mismo slug en los dos idiomas: así el cambio de idioma
+// y los hreflang apuntan siempre a la misma página.
+export const getStaticPaths = (() =>
+  LANGS.flatMap((lang) =>
+    PAGE_SLUGS.map((slug) => ({ params: { lang, slug }, props: { lang, slug } })),
+  )) satisfies GetStaticPaths;
+
+const { lang, slug } = Astro.props;
+---
+
+<PlaceholderPage lang={lang} slug={slug} />

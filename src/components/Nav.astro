@@ -14,14 +14,18 @@ import backing from "../assets/landing/logo/sticker-backing.svg";
 import notebookEdge from "../assets/landing/nav/notebook-edge.svg";
 import washiYellow from "../assets/landing/doodles/washi-tape-yellow.svg";
 import arrowRaw from "../assets/landing/doodles/arrow-curve-up-left.svg?raw";
-import { APP_URL, INSTALL_URL, NAV_PAPER_RETURN } from "../config/site";
+import { APP_URL, INSTALL_URL, NAV_PAPER_RETURN, localizeUrl } from "../config/site";
 import { getT, type Lang } from "../i18n";
 
 interface Props {
   lang: Lang;
+  /** Página actual dentro del idioma ("install/"); vacío en la portada. */
+  path?: string;
 }
 
-const { lang } = Astro.props;
+const { lang, path = "" } = Astro.props;
+// En la portada "aline" sube al inicio; en las demás páginas lleva a la portada
+const logoHref = path ? `/${lang}/` : "#top";
 const t = getT(lang);
 ---
 
@@ -31,7 +35,7 @@ const t = getT(lang);
   <div class="logo-dock" data-sticker-slot>
     <img class="logo-dock__backing" src={backing.src} width="164" height="80" alt="" />
     <span class="logo-dock__die" data-sticker-die aria-hidden="true"></span>
-    <a class="logo-dock__pencil" href="#top" tabindex="-1" data-sticker-under>
+    <a class="logo-dock__pencil" href={logoHref} tabindex="-1" data-sticker-under>
       <img src={alinePencil.src} width="120" height="44" alt="aline" />
     </a>
     <Sticker
@@ -60,10 +64,10 @@ const t = getT(lang);
     <div class="paper__body">
       <img class="paper__tape" src={washiYellow.src} width="96" height="26" alt="" />
       <div class="paper__row paper__row--lang">
-        <LangSwitch lang={lang} variant="hand" />
+        <LangSwitch lang={lang} variant="hand" {path} />
       </div>
       <div class="paper__row paper__row--ctas">
-        <DrawnButton class="paper__install" href={INSTALL_URL} variant="secondary">
+        <DrawnButton class="paper__install" href={localizeUrl(INSTALL_URL, lang)} variant="secondary">
           {t.nav.install}
         </DrawnButton>
         <DrawnButton href={APP_URL} variant="primary">

@@ -5,7 +5,7 @@ import heroBg from "../assets/hero/aline-hero-img.jpg";
 import pencil from "../assets/hero/aline-lapiz.webp";
 // Miniatura de 48px (324 bytes) que se pinta al instante mientras llega el fondo
 import heroLqip from "../assets/hero/aline-hero-lqip.webp?inline";
-import { APP_URL, INSTALL_URL } from "../config/site";
+import { APP_URL, INSTALL_URL, localizeUrl } from "../config/site";
 import { heroConfig } from "../config/hero";
 import { getT, type Lang } from "../i18n";
 
@@ -97,7 +97,7 @@ const STRIKE =
         <DrawnButton href={APP_URL} variant="primary" size="lg">
           {t.cta.open}
         </DrawnButton>
-        <DrawnButton href={INSTALL_URL} variant="secondary" size="lg">
+        <DrawnButton href={localizeUrl(INSTALL_URL, lang)} variant="secondary" size="lg">
           {t.cta.installApp}
         </DrawnButton>
         <p class="hero__runs hand">{t.hero.runsIn}</p>
@@ -109,7 +109,7 @@ const STRIKE =
 <script>
   import { heroConfig } from "../config/hero";
 
-  const { timings: T, pencilTip, pencilSize, baseline, wobble, away } = heroConfig;
+  const { timings: T, pencilTip, pencilSize, baseline, wobble, away, rest } = heroConfig;
 
   const easeInOut = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
   const easeOut = (p: number) => 1 - (1 - p) ** 3;
@@ -191,10 +191,10 @@ const STRIKE =
 
     function placePencil(x: number, y: number) {
       // La punta del lápiz, escalada al tamaño renderizado, cae sobre (x, y). Las coordenadas son
-      // relativas a la palabra; ink.offsetLeft es el hueco que queda a su izquierda dentro del espacio fijo.
+      // relativas al hueco fijo de la palabra (.hw), no a la palabra: así un punto de reposo común
+      // a todas las palabras no se mueve cuando cambia su ancho.
       const scale = pencil!.offsetWidth / pencilSize.width;
-      const ox = ink!.offsetLeft;
-      pencil!.style.transform = `translate(${ox + x - pencilTip.x * scale}px, ${y - pencilTip.y * scale}px)`;
+      pencil!.style.transform = `translate(${x - pencilTip.x * scale}px, ${y - pencilTip.y * scale}px)`;
     }
 
     function frame(now: number) {
@@ -216,9 +216,16 @@ const STRIKE =
       const h = text!.offsetHeight;
       const t = elapsed;
       const baseY = h * baseline;
+      // La palabra va alineada a la derecha de su hueco: x0 es dónde empieza y x1 dónde acaba
+      const x0 = ink!.offsetLeft;
+      const x1 = x0 + w;
+      // Punto de reposo neutro, igual para todas las palabras: el lápiz termina ahí tras tachar y
+      // sale de ahí hacia la palabra siguiente, así no hay salto aunque cambie su ancho
+      const restX = h * rest.x;
+      const restY = baseY + h * rest.y;
       // Tras resaltar, el lápiz se aparta a la derecha del sufijo, a la altura de la línea,
       // para que el eslogan se lea entero
-      const suffixEnd = suffix!.offsetLeft + suffix!.offsetWidth - word!.offsetLeft - ink!.offsetLeft;
+      const suffixEnd = suffix!.offsetLeft + suffix!.offsetWidth - word!.offsetLeft;
       const awayX = suffixEnd + h * away.x;
       const awayY = baseY + h * away.y;
       const strikeY = (e: number) => h * 0.55 + Math.sin(e * Math.PI * 14) * h * 0.14;
@@ -227,24 +234,29 @@ const STRIKE =
       let highlight = 0;
       let strikeP = 0;
       let opacity = 1;
-      let hx = 0;
-      let hy = baseY;
+      let hx = restX;
+      let hy = restY;
 
       if (t < ph.p0) {
-        // Pausa: el lápiz espera al inicio
+        // Pausa: viaja con calma desde el reposo hasta el inicio de la palabra
+        const e = easeInOut(t / ph.p0);
+        hx = lerp(restX, x0, e);
+        hy = lerp(restY, baseY, e);
       } else if (t < ph.p1) {
         const p = (t - ph.p0) / ph.write;
         const e = easeInOut(p);
         reveal = e;
         const cycles = Math.max(1, letters);
-        hx = e * w + Math.sin(e * Math.PI * 2 * cycles * 1.3) * wobble.x * w;
-        hy = baseY - Math.abs(Math.sin(e * Math.PI * cycles)) * wobble.y * h * 2 + wobble.y * h;
+        // El temblor se apaga en los extremos para enlazar sin salto con la fase anterior y la siguiente
+        const env = Math.sin(Math.PI * e);
+        hx = x0 + e * w + Math.sin(e * Math.PI * 2 * cycles * 1.3) * wobble.x * w * env;
+        hy = baseY + env * wobble.y * h * (1 - 2 * Math.abs(Math.sin(e * Math.PI * cycles)));
       } else if (t < ph.p2) {
         const p = (t - ph.p1) / T.highlight;
         const e = easeInOut(p);
         reveal = 1;
         highlight = easeOut(p);
-        hx = lerp(w, awayX, e);
+        hx = lerp(x1, awayX, e);
         hy = lerp(baseY, awayY, e) - Math.sin(Math.PI * e) * h * 0.25;
       } else if (t < ph.p3) {
         const s = (t - ph.p2) / 1000;
@@ -257,14 +269,14 @@ const STRIKE =
         const e = easeInOut((t - ph.p3) / T.approach);
         reveal = 1;
         highlight = 1;
-        hx = lerp(awayX, 0, e);
+        hx = lerp(awayX, x0, e);
         hy = lerp(awayY, strikeY(0), e) - Math.sin(Math.PI * e) * h * 0.3;
       } else if (t < ph.p4) {
         const e = easeInOut((t - ph.p3b) / T.strike);
         reveal = 1;
         highlight = 1;
         strikeP = e;
-        hx = e * w;
+        hx = x0 + e * w;
         hy = strikeY(e);
       } else {
         const p = easeInOut((t - ph.p4) / T.fade);
@@ -272,8 +284,9 @@ const STRIKE =
         highlight = 1;
         strikeP = 1;
         opacity = 1 - p;
-        hx = lerp(w, 0, p);
-        hy = lerp(h * 0.55, baseY, p);
+        // Se aleja al reposo común, que es también donde arranca la palabra siguiente
+        hx = lerp(x1, restX, p);
+        hy = lerp(strikeY(1), restY, p);
       }
 
       text!.style.clipPath = `inset(-40% ${(1 - reveal) * 100}% -40% -10%)`;
