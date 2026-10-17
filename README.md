@@ -51,6 +51,10 @@ pnpm aplica una edad mínima de publicación a las dependencias: si un `pnpm add
 
 Los tramos que cruzan de un lado a otro empiezan y terminan en el borde del contenido ±8px (`offsets` en `thread.ts`), así los cruces caen siempre en los huecos entre secciones.
 
+Los titulares de `ways`, `pad` y `facts` quedan encerrados en un bucle a mano (superelipse irregular que se ensancha donde hay sitio y se endereza donde el titular está pegado al borde). Se ajusta en `loop` dentro de `thread.ts`.
+
+El lápiz no va pegado al scroll: lo persigue con velocidad y aceleración limitadas (`chase` en `thread.ts`). En los tramos normales alcanza rápido el punto del scroll; dentro de los bucles va a ritmo de mano (`loopSpeed`), aunque el scroll vaya más deprisa o se quede quieto.
+
 ## Estructura
 
 - `src/components/Hero.astro`: el contenido va encima de la hoja pintada del fondo, girado con ella y con tamaños en `cqi` relativos a la hoja. Un lápiz escribe la palabra, la resalta y la tacha. Con `prefers-reduced-motion` no hay lápiz y la palabra cambia cada 2.6 s. La versión con la hoja en HTML quedó en el tag `opcion-b`.

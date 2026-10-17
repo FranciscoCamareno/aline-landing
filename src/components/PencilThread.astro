@@ -1,14 +1,15 @@
 ---
 /*
  * El hilo de lápiz: "aline" se lee "a line". Una sola línea nace bajo el hero, baja por los
- * márgenes uniendo las secciones y termina sobre el CTA final. La ruta se calcula en JS a partir
- * de las anclas del DOM; GSAP (ScrollTrigger + DrawSVG) se carga solo al acercarse.
+ * márgenes uniendo las secciones, encierra cada titular de sección en un bucle a mano y termina
+ * sobre el CTA final. La ruta se calcula en JS a partir de las anclas del DOM; GSAP
+ * (ScrollTrigger + DrawSVG) se carga solo al acercarse.
  */
 import pencilThread from "../assets/landing/pencil/pencil-thread.svg";
 import { threadConfig as c } from "../config/thread";
 ---
 
-<svg class="pencil-thread" aria-hidden="true" focusable="false" data-pencil-thread data-pencil-src={pencilThread.src}>
+<svg class="pencil-thread" aria-hidden="true" focusable="false" data-pencil-thread>
   <path
     data-thread-path
     fill="none"
@@ -26,6 +27,13 @@ import { threadConfig as c } from "../config/thread";
   import { threadConfig as c } from "../config/thread";
 
   type Pt = { x: number; y: number };
+  type Side = "l" | "r";
+  /** Un tramo de la ruta: su `d` sin el M inicial, dónde acaba y si es un bucle. */
+  interface Piece {
+    d: string;
+    end: Pt;
+    loop: boolean;
+  }
 
   const svg = document.querySelector<SVGSVGElement>("[data-pencil-thread]");
   const path = svg?.querySelector<SVGPathElement>("[data-thread-path]");
@@ -34,73 +42,243 @@ import { threadConfig as c } from "../config/thread";
   const wide = window.matchMedia(`(min-width: ${c.minWidth}px)`);
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-  // Tabla longitud ↔ y para saber cuánto trazo hay por encima de la línea de dibujo
+  // Tabla longitud ↔ y: cuánto trazo hay por encima de la línea de dibujo.
+  // Dentro de un bucle todas las muestras comparten la y de su inicio, así el bucle entero
+  // pasa a ser el objetivo en cuanto la línea de dibujo llega al titular.
   let total = 0;
   let lens: number[] = [];
   let ys: number[] = [];
-  let startY = 0;
-  let endY = 0;
+  /** Tramos de longitud que son bucles (para dibujarlos a ritmo de mano). */
+  let loopRanges: [number, number][] = [];
 
+  const f = (n: number) => n.toFixed(1);
   const anchor = (name: string) => document.querySelector<HTMLElement>(`[data-thread-anchor="${name}"]`);
   const box = (el: HTMLElement) => {
     const r = el.getBoundingClientRect();
     return { top: r.top + window.scrollY, bottom: r.bottom + window.scrollY };
   };
 
-  /** Calcula los puntos a partir de las anclas. Devuelve null si falta alguna. */
-  function points(): { pts: Pt[]; sides: ("c" | "l" | "r")[] } | null {
-    const names = ["start", "peek", "ways", "ways-end", "pad", "pad-end", "facts", "facts-end", "end"];
-    const els = names.map(anchor);
-    if (els.some((e) => !e)) return null;
-    const [start, peek, ways, waysEnd, pad, padEnd, facts, factsEnd, end] = els.map((e) => box(e!)) as {
-      top: number;
-      bottom: number;
-    }[];
-    const w = document.documentElement.clientWidth;
-    const margin = (w - Math.min(c.containerMax, w)) / 2;
-    const xl = Math.max(c.minEdge, margin - c.inset);
-    const xr = w - xl;
-    const cx = w / 2;
-    const o = c.offsets;
-    return {
-      pts: [
-        { x: cx, y: start!.bottom + o.start },
-        { x: xl, y: peek!.top + o.sideTop },
-        { x: xl, y: peek!.bottom + o.sideBottom },
-        { x: xr, y: ways!.top + o.sideTop },
-        { x: xr, y: waysEnd!.bottom + o.waysBottom },
-        { x: xl, y: pad!.top + o.sideTop },
-        { x: xl, y: padEnd!.bottom + o.sideBottom },
-        { x: xr, y: facts!.top + o.sideTop },
-        { x: xr, y: factsEnd!.bottom + o.factsBottom },
-        { x: cx, y: end!.top + o.end },
-      ],
-      sides: ["c", "l", "l", "r", "r", "l", "l", "r", "r", "c"],
-    };
+  /** Caja del texto de un titular (no del bloque, que es más ancho que el texto). */
+  function textBox(el: HTMLElement) {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const rects = [...range.getClientRects()].filter((r) => r.width > 1 && r.height > 1);
+    const left = Math.min(...rects.map((r) => r.left)) + window.scrollX;
+    const right = Math.max(...rects.map((r) => r.right)) + window.scrollX;
+    const top = Math.min(...rects.map((r) => r.top)) + window.scrollY;
+    const bottom = Math.max(...rects.map((r) => r.bottom)) + window.scrollY;
+    return { left, right, top, bottom };
   }
 
-  /** Curvas cúbicas de tangente vertical; ondulación leve en los tramos del mismo lado. */
-  function buildPath(pts: Pt[], sides: string[]) {
-    let d = `M${pts[0]!.x.toFixed(1)} ${pts[0]!.y.toFixed(1)}`;
-    let flip = 1;
-    for (let i = 1; i < pts.length; i++) {
-      const a = pts[i - 1]!;
-      const b = pts[i]!;
-      const k = (b.y - a.y) / 2;
-      let wa = 0;
-      let wb = 0;
-      if (sides[i] === sides[i - 1] && sides[i] !== "c") {
-        wa = c.wiggle * flip;
-        wb = -c.wiggle * flip;
-        flip = -flip;
+  /** Pequeño generador determinista: el bucle de cada titular es irregular pero siempre igual. */
+  const seeded = (seed: number) => () => {
+    seed = (seed * 16807) % 2147483647;
+    return seed / 2147483647;
+  };
+
+  /**
+   * Bucle a mano alrededor de un titular: una superelipse que abraza el texto, con el radio un poco
+   * irregular y que se abre al cerrar, de modo que el final se pasa del inicio como un trazo real.
+   * `from` es el lado por el que llega el hilo; el bucle gira hacia el lado contrario y termina arriba.
+   */
+  function loopAround(el: HTMLElement, from: Side, seed: number, minX: number, maxX: number) {
+    const t = textBox(el);
+    const L = c.loop;
+    const cx = (t.left + t.right) / 2;
+    const cy = (t.top + t.bottom) / 2;
+    const a = (t.right - t.left) / 2;
+    const b = (t.bottom - t.top) / 2;
+    // Cada lado tiene su semieje y su exponente: redondo donde hay sitio y más recto donde el
+    // titular está pegado al borde, para no tener que crecer en vertical y pisar el subtítulo
+    const AR = Math.min(a * (1 + L.widen) + L.padX, maxX - cx);
+    const AL = Math.min(a * (1 + L.widen) + L.padX, cx - minX);
+    const solve = (A: number) => {
+      // El exponente más redondo que deja las esquinas del texto dentro sin pasar de maxPadY
+      for (let n = L.exponent; n <= L.maxExponent; n += 0.2) {
+        const inside = 0.9 - (a / A) ** n;
+        if (inside <= 0) continue;
+        const need = b / inside ** (1 / n);
+        if (need <= b + L.maxPadY || n + 0.2 > L.maxExponent) return { n, B: need };
       }
-      d += ` C${(a.x + wa).toFixed(1)} ${(a.y + k).toFixed(1)} ${(b.x + wb).toFixed(1)} ${(b.y - k).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+      return { n: L.maxExponent, B: b + L.maxPadY };
+    };
+    const left = solve(AL);
+    const right = solve(AR);
+    const B = Math.min(b + L.maxPadY, Math.max(b + L.minPadY, left.B, right.B));
+    const rnd = seeded(seed);
+    const phase = rnd() * Math.PI * 2;
+    const tilt = (L.tilt * Math.PI) / 180;
+    // Arranca arriba, en la esquina del lado de llegada, y gira alejándose de él: el cierre
+    // termina avanzando hacia el margen contrario, por donde sigue el hilo
+    const dir = from === "l" ? 1 : -1;
+    const start = from === "l" ? -Math.PI * 0.8 : -Math.PI * 0.2;
+    const sweep = Math.PI * 2 + L.overlap;
+    const steps = 40;
+    const pts: Pt[] = [];
+    for (let i = 0; i <= steps; i++) {
+      const u = i / steps;
+      const th = start + dir * sweep * u;
+      const cos = Math.cos(th);
+      const sin = Math.sin(th);
+      const k = 1 + L.wobble * Math.sin(3 * th + phase) + L.drift * (u - 0.5);
+      const side = cos >= 0 ? right : left;
+      const A = cos >= 0 ? AR : AL;
+      const x0 = A * k * Math.sign(cos) * Math.abs(cos) ** (2 / side.n);
+      const y0 = B * k * Math.sign(sin) * Math.abs(sin) ** (2 / side.n);
+      pts.push({
+        x: cx + x0 * Math.cos(tilt) - y0 * Math.sin(tilt),
+        y: cy + x0 * Math.sin(tilt) + y0 * Math.cos(tilt),
+      });
+    }
+    return { pts, top: cy - B };
+  }
+
+  /** Catmull-Rom → cúbicas, para que el bucle salga redondo y continuo. */
+  function smooth(pts: Pt[]): string {
+    let d = "";
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)]!;
+      const p1 = pts[i]!;
+      const p2 = pts[i + 1]!;
+      const p3 = pts[Math.min(pts.length - 1, i + 2)]!;
+      d += ` C${f(p1.x + (p2.x - p0.x) / 6)} ${f(p1.y + (p2.y - p0.y) / 6)} ${f(p2.x - (p3.x - p1.x) / 6)} ${f(p2.y - (p3.y - p1.y) / 6)} ${f(p2.x)} ${f(p2.y)}`;
     }
     return d;
   }
 
+  const unit = (a: Pt, b: Pt) => {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const l = Math.hypot(dx, dy) || 1;
+    return { x: dx / l, y: dy / l };
+  };
+
+  /** Calcula la ruta completa a partir de las anclas. Devuelve null si falta alguna. */
+  function route(): { start: Pt; pieces: Piece[] } | null {
+    const names = ["start", "peek", "ways", "ways-end", "pad", "pad-end", "facts", "facts-end", "end"];
+    const els = names.map(anchor);
+    if (els.some((e) => !e)) return null;
+    const [startEl, peekEl, waysEl, waysEndEl, padEl, padEndEl, factsEl, factsEndEl, endEl] = els as HTMLElement[];
+    const w = document.documentElement.clientWidth;
+    const margin = (w - Math.min(c.containerMax, w)) / 2;
+    const xl = Math.max(c.minEdge, margin - c.inset);
+    const xr = w - xl;
+    const o = c.offsets;
+    const X = (s: Side) => (s === "l" ? xl : xr);
+
+    const pieces: Piece[] = [];
+    const start: Pt = { x: w / 2, y: box(startEl!).bottom + o.start };
+    let at = start;
+    let flip = 1;
+
+    /** Curva de tangente vertical; ondulada si es un tramo del mismo margen. */
+    const vertical = (to: Pt, sameSide: boolean) => {
+      const k = (to.y - at.y) / 2;
+      const wig = sameSide ? c.wiggle * flip : 0;
+      if (sameSide) flip = -flip;
+      pieces.push({
+        d: ` C${f(at.x + wig)} ${f(at.y + k)} ${f(to.x - wig)} ${f(to.y - k)} ${f(to.x)} ${f(to.y)}`,
+        end: to,
+        loop: false,
+      });
+      at = to;
+    };
+
+    /** Cruza hasta el titular, lo encierra y sale hacia el margen contrario. */
+    const encircle = (el: HTMLElement, from: Side, seed: number) => {
+      // El bucle no pasa de los márgenes del hilo, así las bajadas verticales no lo atraviesan.
+      // Si el titular está más pegado al borde que eso (pantallas estrechas), usa el hueco que haya.
+      const tb = textBox(el);
+      const minX = Math.max(4, Math.min(xl + c.loop.edge * 2, tb.left - c.loop.minGap));
+      const maxX = Math.min(w - 4, Math.max(xr - c.loop.edge * 2, tb.right + c.loop.minGap));
+      const { pts, top } = loopAround(el, from, seed, minX, maxX);
+      const s = pts[0]!;
+      const s1 = pts[1]!;
+      // Llegada: sale vertical del margen y entra al bucle siguiendo su tangente
+      const tin = unit(s, s1);
+      const k = Math.max(40, (s.y - at.y) / 2);
+      const kin = c.loop.entry;
+      pieces.push({
+        d: ` C${f(at.x)} ${f(at.y + k)} ${f(s.x - tin.x * kin)} ${f(s.y - tin.y * kin)} ${f(s.x)} ${f(s.y)}`,
+        end: s,
+        loop: false,
+      });
+      const e = pts[pts.length - 1]!;
+      pieces.push({ d: smooth(pts), end: e, loop: true });
+      // Salida: por encima del texto hasta el margen contrario, y de ahí hacia abajo
+      const to: Pt = { x: X(from === "l" ? "r" : "l"), y: top - 6 };
+      // Sigue la tangente del cierre pero casi en horizontal, para no subirse a la sección anterior
+      const raw = unit(pts[pts.length - 2]!, e);
+      const tout = unit({ x: 0, y: 0 }, { x: raw.x, y: Math.max(raw.y, -0.3) });
+      const kout = Math.min(220, Math.abs(to.x - e.x) * 0.35);
+      pieces.push({
+        d: ` C${f(e.x + tout.x * kout)} ${f(e.y + tout.y * kout)} ${f(to.x)} ${f(to.y - 30)} ${f(to.x)} ${f(to.y)}`,
+        end: to,
+        loop: false,
+      });
+      at = to;
+    };
+
+    vertical({ x: xl, y: box(peekEl!).top + o.sideTop }, false);
+    vertical({ x: xl, y: box(peekEl!).bottom + o.sideBottom }, true);
+    encircle(waysEl!, "l", 11);
+    vertical({ x: xr, y: box(waysEndEl!).bottom + o.waysBottom }, true);
+    encircle(padEl!, "r", 23);
+    vertical({ x: xl, y: box(padEndEl!).bottom + o.sideBottom }, true);
+    encircle(factsEl!, "l", 37);
+    vertical({ x: xr, y: box(factsEndEl!).bottom + o.factsBottom }, true);
+    vertical({ x: w / 2, y: box(endEl!).top + o.end }, false);
+    return { start, pieces };
+  }
+
+  function layout(): boolean {
+    if (!svg || !path) return false;
+    const r = route();
+    if (!r) return false;
+    const w = document.documentElement.clientWidth;
+    const h = document.documentElement.scrollHeight;
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(h));
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    svg.style.height = `${h}px`;
+
+    // Longitud de cada tramo, midiendo con la propia ruta
+    const head = `M${f(r.start.x)} ${f(r.start.y)}`;
+    let from = r.start;
+    let acc = 0;
+    const bounds: { from: number; to: number; loop: boolean }[] = [];
+    for (const p of r.pieces) {
+      path.setAttribute("d", `M${f(from.x)} ${f(from.y)}${p.d}`);
+      const len = path.getTotalLength();
+      bounds.push({ from: acc, to: acc + len, loop: p.loop });
+      acc += len;
+      from = p.end;
+    }
+    path.setAttribute("d", head + r.pieces.map((p) => p.d).join(""));
+    total = path.getTotalLength();
+    loopRanges = bounds.filter((b) => b.loop).map((b) => [b.from, b.to]);
+
+    lens = [];
+    ys = [];
+    let maxY = -Infinity;
+    const n = Math.max(300, Math.round(total / 6));
+    let bi = 0;
+    for (let i = 0; i <= n; i++) {
+      const l = (total * i) / n;
+      while (bi < bounds.length - 1 && l > bounds[bi]!.to) bi++;
+      const piece = bounds[bi]!;
+      // En un bucle, la y no avanza: se queda en la de su inicio (ya alcanzada)
+      if (!piece.loop) maxY = Math.max(maxY, path.getPointAtLength(l).y);
+      lens.push(l);
+      ys.push(maxY);
+    }
+    path.style.strokeDasharray = `${total} ${total}`;
+    return true;
+  }
+
+  /** Longitud objetivo para una y del documento. */
   function lengthAtY(y: number) {
-    if (y <= ys[0]!) return 0;
+    if (y < ys[0]!) return 0;
     if (y >= ys[ys.length - 1]!) return total;
     let lo = 0;
     let hi = ys.length - 1;
@@ -113,49 +291,25 @@ import { threadConfig as c } from "../config/thread";
     return lens[lo]! + (lens[hi]! - lens[lo]!) * t;
   }
 
-  function layout(): boolean {
-    if (!svg || !path) return false;
-    const p = points();
-    if (!p) return false;
-    const w = document.documentElement.clientWidth;
-    const h = document.documentElement.scrollHeight;
-    svg.setAttribute("width", String(w));
-    svg.setAttribute("height", String(h));
-    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
-    svg.style.height = `${h}px`;
-    path.setAttribute("d", buildPath(p.pts, p.sides));
-    total = path.getTotalLength();
-    lens = [];
-    ys = [];
-    let maxY = -Infinity;
-    const n = Math.max(200, Math.round(total / 6));
-    for (let i = 0; i <= n; i++) {
-      const l = (total * i) / n;
-      // la y es monótona; el máximo acumulado absorbe errores de muestreo
-      maxY = Math.max(maxY, path.getPointAtLength(l).y);
-      lens.push(l);
-      ys.push(maxY);
-    }
-    startY = ys[0]!;
-    endY = ys[ys.length - 1]!;
-    path.style.strokeDasharray = `${total} ${total}`;
-    return true;
-  }
+  const inLoop = (len: number) => loopRanges.some(([a, b]) => len > a - 1 && len < b + 1);
 
-  function placePencil(len: number) {
+  let angle: number = c.pencil.baseAngle;
+  function placePencil(len: number, dt: number) {
     if (!path || !pencil) return;
     const p = path.getPointAtLength(len);
-    const a = path.getPointAtLength(Math.max(0, len - 2));
-    const b = path.getPointAtLength(Math.min(total, len + 2));
-    const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI + c.pencil.rotateOffset;
+    const a = path.getPointAtLength(Math.max(0, len - 3));
+    const b = path.getPointAtLength(Math.min(total, len + 3));
+    const tx = unit(a, b).x;
+    // Giro base + inclinación según hacia dónde avanza; suavizado para que no tiemble
+    const want = c.pencil.baseAngle + c.pencil.lean * tx;
+    angle += (want - angle) * Math.min(1, dt / c.pencil.smoothing);
     pencil.setAttribute(
       "transform",
-      `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${angle.toFixed(1)}) translate(${-c.pencil.tipX} ${-c.pencil.tipY})`,
+      `translate(${f(p.x)} ${f(p.y)}) rotate(${f(angle)}) translate(${-c.pencil.tipX} ${-c.pencil.tipY})`,
     );
   }
 
   let started = false;
-  let killTrigger: (() => void) | null = null;
   let timer = 0;
 
   async function startAnimated() {
@@ -166,46 +320,71 @@ import { threadConfig as c } from "../config/thread";
     ]);
     gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin);
 
+    let target = 0;
+    let shown = 0;
+    let velocity = 0;
+    let ready = false;
+
+    const readTarget = () => {
+      target = lengthAtY(window.scrollY + window.innerHeight * c.drawAt);
+    };
+
     const setup = () => {
-      killTrigger?.();
       if (!layout() || !path) return;
       gsap.set(path, { drawSVG: "0% 0%" });
       // DrawSVG deja el dasharray; a partir de aquí solo se actualiza stroke-dashoffset
       path.style.strokeDasharray = `${total} ${total}`;
-      const vh = window.innerHeight;
-      const maxScroll = document.documentElement.scrollHeight - vh;
-      const s0 = Math.max(0, startY - vh * c.drawAt);
-      const s1 = Math.max(s0 + 1, Math.min(maxScroll, endY - vh * c.drawAt));
-      const proxy = { y: startY };
-      const update = () => {
-        const len = lengthAtY(proxy.y);
-        path.style.strokeDashoffset = String(total - len);
-        placePencil(len);
-      };
-      const tween = gsap.fromTo(
-        proxy,
-        { y: startY },
-        {
-          y: endY,
-          ease: "none",
-          onUpdate: update,
-          scrollTrigger: { start: s0, end: s1, scrub: c.scrub },
-        },
-      );
-      update();
+      readTarget();
+      if (!ready) {
+        // Al cargar a media página no se redibuja todo desde arriba: arranca donde toca
+        shown = target;
+        ready = true;
+      }
+      shown = Math.min(shown, total);
+      path.style.strokeDashoffset = String(total - shown);
+      placePencil(shown, 1);
       pencil!.style.visibility = "visible";
-      killTrigger = () => {
-        tween.scrollTrigger?.kill();
-        tween.kill();
-      };
     };
 
     setup();
+    ScrollTrigger.create({ start: 0, end: "max", onUpdate: readTarget });
+
+    // El lápiz persigue al objetivo con velocidad y aceleración limitadas: arranca y frena suave,
+    // y dentro de los bucles va a ritmo de mano aunque el scroll vaya por delante
+    gsap.ticker.add((_time, deltaMs) => {
+      if (!ready || !path) return;
+      const dt = Math.min(0.05, deltaMs / 1000);
+      const diff = target - shown;
+      if (Math.abs(diff) < 0.5 && Math.abs(velocity) < 5) {
+        velocity = 0;
+        return;
+      }
+      const looping = inLoop(shown);
+      const cap = looping ? c.chase.loopSpeed : c.chase.speed;
+      const accel = looping ? c.chase.loopAccel : c.chase.accel;
+      const want = Math.sign(diff) * Math.min(cap, Math.abs(diff) / c.chase.ease);
+      const dv = want - velocity;
+      velocity += Math.sign(dv) * Math.min(Math.abs(dv), accel * dt);
+      // Al entrar en un bucle desde un tramo rápido, frena hasta su velocidad
+      if (looping) velocity = Math.sign(velocity) * Math.min(Math.abs(velocity), cap);
+      let next = shown + velocity * dt;
+      if ((diff > 0 && next > target) || (diff < 0 && next < target)) {
+        next = target;
+        velocity = 0;
+      }
+      shown = Math.max(0, Math.min(total, next));
+      path.style.strokeDashoffset = String(total - shown);
+      placePencil(shown, dt);
+    });
+
     const relayout = () => {
       window.clearTimeout(timer);
       timer = window.setTimeout(() => {
         if (!wide.matches) return;
+        // Conserva la proporción dibujada al cambiar la geometría
+        const ratio = total ? shown / total : 0;
         setup();
+        shown = Math.min(total, ratio * total);
         ScrollTrigger.refresh();
       }, c.debounceMs);
     };
