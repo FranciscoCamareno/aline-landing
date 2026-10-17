@@ -1,0 +1,89 @@
+---
+import markdownIcon from "../assets/landing/icons/markdown-file.svg?raw";
+import cloudIcon from "../assets/landing/icons/cloud-sync.svg?raw";
+import swapIcon from "../assets/landing/icons/swap.svg?raw";
+import globeIcon from "../assets/landing/icons/globe.svg?raw";
+import { getT, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getT(lang).facts;
+
+const facts = [
+  { ...t.markdown, icon: markdownIcon },
+  { ...t.local, icon: cloudIcon },
+  { ...t.excalidraw, icon: swapIcon },
+  { ...t.languages, icon: globeIcon },
+];
+---
+
+<section class="section" id="why" aria-labelledby="facts-title">
+  <div class="container">
+    <h2 class="section__title" id="facts-title" data-thread-anchor="facts">
+      {t.title}
+    </h2>
+
+    <ul class="facts" data-thread-anchor="facts-end">
+      {facts.map((f) => (
+        <li class="fact">
+          <span class="fact__icon icon" set:html={f.icon} />
+          <h3 class="fact__title">{f.title}</h3>
+          <p class="fact__body">{f.body}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 40px;
+    margin: 48px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .fact {
+    padding-top: 22px;
+    border-top: 2px solid var(--border-ink);
+  }
+
+  .fact__icon {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 14px;
+    color: var(--text-primary);
+  }
+
+  .fact__title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 900;
+    line-height: 1.2;
+  }
+
+  .fact__body {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  @media (max-width: 959.98px) {
+    .facts {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 599.98px) {
+    .facts {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

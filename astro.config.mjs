@@ -1,8 +1,11 @@
 // @ts-check
 import { defineConfig } from "astro/config";
+import sitemap from "@astrojs/sitemap";
+
+const site = "https://aline.app";
 
 export default defineConfig({
-  site: "https://aline.app",
+  site,
   output: "static",
   trailingSlash: "always",
   i18n: {
@@ -14,4 +17,11 @@ export default defineConfig({
       redirectToDefaultLocale: false,
     },
   },
+  integrations: [
+    sitemap({
+      // Solo /en/ y /es/, enlazadas entre sí con hreflang
+      filter: (page) => page !== `${site}/`,
+      i18n: { defaultLocale: "en", locales: { en: "en", es: "es" } },
+    }),
+  ],
 });

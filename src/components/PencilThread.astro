@@ -1,0 +1,256 @@
+---
+/*
+ * El hilo de lápiz: "aline" se lee "a line". Una sola línea nace bajo el hero, baja por los
+ * márgenes uniendo las secciones y termina sobre el CTA final. La ruta se calcula en JS a partir
+ * de las anclas del DOM; GSAP (ScrollTrigger + DrawSVG) se carga solo al acercarse.
+ */
+import pencilThread from "../assets/landing/pencil/pencil-thread.svg";
+import { threadConfig as c } from "../config/thread";
+---
+
+<svg class="pencil-thread" aria-hidden="true" focusable="false" data-pencil-thread data-pencil-src={pencilThread.src}>
+  <path
+    data-thread-path
+    fill="none"
+    stroke={c.stroke.color}
+    stroke-width={c.stroke.width}
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  ></path>
+  <g data-thread-pencil style="visibility: hidden">
+    <image href={pencilThread.src} width={c.pencil.width} height={c.pencil.height} />
+  </g>
+</svg>
+
+<script>
+  import { threadConfig as c } from "../config/thread";
+
+  type Pt = { x: number; y: number };
+
+  const svg = document.querySelector<SVGSVGElement>("[data-pencil-thread]");
+  const path = svg?.querySelector<SVGPathElement>("[data-thread-path]");
+  const pencil = svg?.querySelector<SVGGElement>("[data-thread-pencil]");
+
+  const wide = window.matchMedia(`(min-width: ${c.minWidth}px)`);
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  // Tabla longitud ↔ y para saber cuánto trazo hay por encima de la línea de dibujo
+  let total = 0;
+  let lens: number[] = [];
+  let ys: number[] = [];
+  let startY = 0;
+  let endY = 0;
+
+  const anchor = (name: string) => document.querySelector<HTMLElement>(`[data-thread-anchor="${name}"]`);
+  const box = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    return { top: r.top + window.scrollY, bottom: r.bottom + window.scrollY };
+  };
+
+  /** Calcula los puntos a partir de las anclas. Devuelve null si falta alguna. */
+  function points(): { pts: Pt[]; sides: ("c" | "l" | "r")[] } | null {
+    const names = ["start", "peek", "ways", "ways-end", "pad", "pad-end", "facts", "facts-end", "end"];
+    const els = names.map(anchor);
+    if (els.some((e) => !e)) return null;
+    const [start, peek, ways, waysEnd, pad, padEnd, facts, factsEnd, end] = els.map((e) => box(e!)) as {
+      top: number;
+      bottom: number;
+    }[];
+    const w = document.documentElement.clientWidth;
+    const margin = (w - Math.min(c.containerMax, w)) / 2;
+    const xl = Math.max(c.minEdge, margin - c.inset);
+    const xr = w - xl;
+    const cx = w / 2;
+    const o = c.offsets;
+    return {
+      pts: [
+        { x: cx, y: start!.bottom + o.start },
+        { x: xl, y: peek!.top + o.sideTop },
+        { x: xl, y: peek!.bottom + o.sideBottom },
+        { x: xr, y: ways!.top + o.sideTop },
+        { x: xr, y: waysEnd!.bottom + o.waysBottom },
+        { x: xl, y: pad!.top + o.sideTop },
+        { x: xl, y: padEnd!.bottom + o.sideBottom },
+        { x: xr, y: facts!.top + o.sideTop },
+        { x: xr, y: factsEnd!.bottom + o.factsBottom },
+        { x: cx, y: end!.top + o.end },
+      ],
+      sides: ["c", "l", "l", "r", "r", "l", "l", "r", "r", "c"],
+    };
+  }
+
+  /** Curvas cúbicas de tangente vertical; ondulación leve en los tramos del mismo lado. */
+  function buildPath(pts: Pt[], sides: string[]) {
+    let d = `M${pts[0]!.x.toFixed(1)} ${pts[0]!.y.toFixed(1)}`;
+    let flip = 1;
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1]!;
+      const b = pts[i]!;
+      const k = (b.y - a.y) / 2;
+      let wa = 0;
+      let wb = 0;
+      if (sides[i] === sides[i - 1] && sides[i] !== "c") {
+        wa = c.wiggle * flip;
+        wb = -c.wiggle * flip;
+        flip = -flip;
+      }
+      d += ` C${(a.x + wa).toFixed(1)} ${(a.y + k).toFixed(1)} ${(b.x + wb).toFixed(1)} ${(b.y - k).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;
+    }
+    return d;
+  }
+
+  function lengthAtY(y: number) {
+    if (y <= ys[0]!) return 0;
+    if (y >= ys[ys.length - 1]!) return total;
+    let lo = 0;
+    let hi = ys.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (ys[mid]! <= y) lo = mid;
+      else hi = mid;
+    }
+    const t = (y - ys[lo]!) / (ys[hi]! - ys[lo]! || 1);
+    return lens[lo]! + (lens[hi]! - lens[lo]!) * t;
+  }
+
+  function layout(): boolean {
+    if (!svg || !path) return false;
+    const p = points();
+    if (!p) return false;
+    const w = document.documentElement.clientWidth;
+    const h = document.documentElement.scrollHeight;
+    svg.setAttribute("width", String(w));
+    svg.setAttribute("height", String(h));
+    svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+    svg.style.height = `${h}px`;
+    path.setAttribute("d", buildPath(p.pts, p.sides));
+    total = path.getTotalLength();
+    lens = [];
+    ys = [];
+    let maxY = -Infinity;
+    const n = Math.max(200, Math.round(total / 6));
+    for (let i = 0; i <= n; i++) {
+      const l = (total * i) / n;
+      // la y es monótona; el máximo acumulado absorbe errores de muestreo
+      maxY = Math.max(maxY, path.getPointAtLength(l).y);
+      lens.push(l);
+      ys.push(maxY);
+    }
+    startY = ys[0]!;
+    endY = ys[ys.length - 1]!;
+    path.style.strokeDasharray = `${total} ${total}`;
+    return true;
+  }
+
+  function placePencil(len: number) {
+    if (!path || !pencil) return;
+    const p = path.getPointAtLength(len);
+    const a = path.getPointAtLength(Math.max(0, len - 2));
+    const b = path.getPointAtLength(Math.min(total, len + 2));
+    const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI + c.pencil.rotateOffset;
+    pencil.setAttribute(
+      "transform",
+      `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)}) rotate(${angle.toFixed(1)}) translate(${-c.pencil.tipX} ${-c.pencil.tipY})`,
+    );
+  }
+
+  let started = false;
+  let killTrigger: (() => void) | null = null;
+  let timer = 0;
+
+  async function startAnimated() {
+    const [{ gsap }, { ScrollTrigger }, { DrawSVGPlugin }] = await Promise.all([
+      import("gsap"),
+      import("gsap/ScrollTrigger"),
+      import("gsap/DrawSVGPlugin"),
+    ]);
+    gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin);
+
+    const setup = () => {
+      killTrigger?.();
+      if (!layout() || !path) return;
+      gsap.set(path, { drawSVG: "0% 0%" });
+      // DrawSVG deja el dasharray; a partir de aquí solo se actualiza stroke-dashoffset
+      path.style.strokeDasharray = `${total} ${total}`;
+      const vh = window.innerHeight;
+      const maxScroll = document.documentElement.scrollHeight - vh;
+      const s0 = Math.max(0, startY - vh * c.drawAt);
+      const s1 = Math.max(s0 + 1, Math.min(maxScroll, endY - vh * c.drawAt));
+      const proxy = { y: startY };
+      const update = () => {
+        const len = lengthAtY(proxy.y);
+        path.style.strokeDashoffset = String(total - len);
+        placePencil(len);
+      };
+      const tween = gsap.fromTo(
+        proxy,
+        { y: startY },
+        {
+          y: endY,
+          ease: "none",
+          onUpdate: update,
+          scrollTrigger: { start: s0, end: s1, scrub: c.scrub },
+        },
+      );
+      update();
+      pencil!.style.visibility = "visible";
+      killTrigger = () => {
+        tween.scrollTrigger?.kill();
+        tween.kill();
+      };
+    };
+
+    setup();
+    const relayout = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        if (!wide.matches) return;
+        setup();
+        ScrollTrigger.refresh();
+      }, c.debounceMs);
+    };
+    window.addEventListener("resize", relayout);
+    new ResizeObserver(relayout).observe(document.body);
+  }
+
+  function startStatic() {
+    // Movimiento reducido: la línea completa desde el inicio y sin lápiz
+    const draw = () => {
+      if (layout() && path) path.style.strokeDashoffset = "0";
+    };
+    draw();
+    const relayout = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(draw, c.debounceMs);
+    };
+    window.addEventListener("resize", relayout);
+    new ResizeObserver(relayout).observe(document.body);
+  }
+
+  function boot() {
+    if (started || !wide.matches || !svg || !path) return;
+    started = true;
+    if (reduced.matches) {
+      startStatic();
+      return;
+    }
+    // Hasta que llega GSAP, el trazo está oculto
+    if (layout()) path.style.strokeDashoffset = String(total);
+    const first = anchor("peek") ?? anchor("start");
+    if (!first) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          io.disconnect();
+          void startAnimated();
+        }
+      },
+      { rootMargin: "300px 0px" },
+    );
+    io.observe(first);
+  }
+
+  boot();
+  // Si la ventana pasa a ser ancha más tarde, el hilo arranca entonces
+  wide.addEventListener("change", boot);
+</script>

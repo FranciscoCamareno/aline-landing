@@ -36,8 +36,12 @@ const t = getT(lang);
 
     <div class="nav__actions">
       <LangSwitch lang={lang} />
-      <DrawnButton class="nav__install" href={INSTALL_URL} variant="secondary">{t.nav.install}</DrawnButton>
-      <DrawnButton href={APP_URL} variant="primary">{t.cta.open}</DrawnButton>
+      <DrawnButton class="nav__install" href={INSTALL_URL} variant="secondary">
+        {t.nav.install}
+      </DrawnButton>
+      <DrawnButton href={APP_URL} variant="primary">
+        {t.cta.open}
+      </DrawnButton>
     </div>
   </div>
 </header>

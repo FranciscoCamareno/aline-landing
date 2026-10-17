@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import PencilThread from "../components/PencilThread.astro";
 import { SITE_URL } from "../config/site";
 import { LANGS, getT, type Lang } from "../i18n";
 
@@ -10,6 +11,7 @@ interface Props {
 const { lang } = Astro.props;
 const t = getT(lang);
 const canonical = new URL(`/${lang}/`, SITE_URL).href;
+const ogImage = new URL(`/og/${lang}.png`, SITE_URL).href;
 ---
 
 <!doctype html>
@@ -21,19 +23,35 @@ const canonical = new URL(`/${lang}/`, SITE_URL).href;
     <meta name="description" content={t.meta.description} />
     <meta name="theme-color" content="#FFFDF4" />
     <link rel="canonical" href={canonical} />
-    {LANGS.map((l) => <link rel="alternate" hreflang={l} href={new URL(`/${l}/`, SITE_URL).href} />)}
+    {LANGS.map((l) => (
+      <link rel="alternate" hreflang={l} href={new URL(`/${l}/`, SITE_URL).href} />
+    ))}
     <link rel="alternate" hreflang="x-default" href={new URL("/", SITE_URL).href} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
     <!-- Solo las fuentes del hero: Nunito 900 (variable) y Excalifont -->
     <link rel="preload" href="/fonts/nunito-latin-var.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/excalifont-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="aline" />
+    <meta property="og:url" content={canonical} />
     <meta property="og:title" content={t.meta.title} />
     <meta property="og:description" content={t.meta.description} />
     <meta property="og:locale" content={lang === "es" ? "es_ES" : "en_US"} />
+    <meta property="og:locale:alternate" content={lang === "es" ? "en_US" : "es_ES"} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={t.meta.title} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={t.meta.title} />
+    <meta name="twitter:description" content={t.meta.description} />
+    <meta name="twitter:image" content={ogImage} />
   </head>
   <body>
     <slot />
-    <!-- Fase 2: hilo de lápiz animado con scroll -->
-    <svg class="pencil-thread" aria-hidden="true" focusable="false" data-pencil-thread></svg>
+    <PencilThread />
   </body>
 </html>

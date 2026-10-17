@@ -13,7 +13,9 @@ const t = getT(lang);
 
 <a class="lang" href={`/${target}/`} hreflang={target} lang={target} data-lang={target} aria-label={t.lang.aria}>
   <span class:list={["lang__opt", { "is-active": lang === "en" }]}>EN</span>
-  <span class="lang__sep" aria-hidden="true">/</span>
+  <span class="lang__sep" aria-hidden="true">
+    /
+  </span>
   <span class:list={["lang__opt", { "is-active": lang === "es" }]}>ES</span>
 </a>
 

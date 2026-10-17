@@ -99,13 +99,76 @@ a {
   padding-inline: 24px;
 }
 
-/* Fase 2: el hilo de lápiz se dibuja en este svg, absoluto a nivel de página */
+/* Secciones: por encima del hilo de lápiz, con el ritmo vertical del brief */
+.section {
+  position: relative;
+  z-index: 1;
+  padding-top: 150px;
+  /* las cintas y los giros no pueden crear scroll horizontal en móvil */
+  overflow-x: clip;
+}
+
+.section--after-hero {
+  padding-top: 110px;
+}
+
+@media (max-width: 959.98px) {
+  .section,
+  .section--after-hero {
+    padding-top: 96px;
+  }
+}
+
+.section__title {
+  max-width: 900px;
+  margin: 0 0 18px;
+  font-weight: 900;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+
+.section__sub {
+  max-width: 600px;
+  margin: 0 0 48px;
+  color: var(--text-secondary);
+  font-size: 19px;
+  line-height: 1.6;
+}
+
+/* Anotación manuscrita */
+.note {
+  font-family: var(--font-hand);
+  font-weight: 400;
+  font-size: 19px;
+  line-height: 1.25;
+  color: var(--text-accent);
+}
+
+.icon {
+  display: inline-block;
+  flex: none;
+}
+
+.icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* El hilo de lápiz: un único svg absoluto a nivel de página, debajo de las secciones */
 .pencil-thread {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
   overflow: visible;
-  z-index: 1;
+  z-index: 0;
+}
+
+@media (max-width: 959.98px) {
+  .pencil-thread {
+    display: none;
+  }
 }

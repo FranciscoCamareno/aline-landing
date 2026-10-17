@@ -2,7 +2,7 @@
 import { Picture } from "astro:assets";
 import DrawnButton from "./DrawnButton.astro";
 import heroBg from "../assets/hero/aline-hero-img.jpg";
-import hand from "../assets/hero/aline-mano.webp";
+import pencil from "../assets/hero/aline-lapiz.webp";
 import { APP_URL, INSTALL_URL } from "../config/site";
 import { heroConfig } from "../config/hero";
 import { getT, type Lang } from "../i18n";
@@ -24,8 +24,8 @@ const cssVars = [
   `--sheet-h: ${sheet.h / 100}`,
   `--sheet-rot: ${sheet.rotate}deg`,
   `--sheet-max: ${heroConfig.sheetMaxPx}px`,
-  `--hand-w: ${heroConfig.handWidthEm.desktop}em`,
-  `--hand-w-sm: ${heroConfig.handWidthEm.mobile}em`,
+  `--pencil-w: ${heroConfig.pencilWidthEm.desktop}em`,
+  `--pencil-w-sm: ${heroConfig.pencilWidthEm.mobile}em`,
 ].join("; ");
 
 // Forma del resaltador (doodles/highlight-bar.svg) y del tachado (doodles/strike-scribble.svg), animadas inline
@@ -34,7 +34,7 @@ const STRIKE =
   "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L66 13 L72 28 L80 14 L86 27 L94 16 L98 22";
 ---
 
-<section class="hero" id="top" style={cssVars} data-hero>
+<section class="hero" id="top" style={cssVars} data-hero data-thread-anchor="start">
   <!-- Opción A: el escritorio pintado ya trae la hoja; el contenido se coloca encima,
        en coordenadas relativas a la imagen (config/hero.ts → sheet) -->
   <div class="hero__stage">
@@ -70,15 +70,15 @@ const STRIKE =
                 </svg>
               </span>
               <Picture
-                class="hw__hand"
-                src={hand}
+                class="hw__pencil"
+                src={pencil}
                 alt=""
                 formats={["avif", "webp"]}
-                widths={[480, 800, 1200]}
-                sizes="(max-width: 599px) 240px, 640px"
+                widths={[240, 480, 720]}
+                sizes="(max-width: 599px) 120px, 240px"
                 quality={70}
                 loading="eager"
-                data-hand
+                data-pencil
               />
             </span>
             {t.hero.suffix}
@@ -104,7 +104,7 @@ const STRIKE =
 <script>
   import { heroConfig } from "../config/hero";
 
-  const { timings: T, pencilTip, handSize, baseline, wobble } = heroConfig;
+  const { timings: T, pencilTip, pencilSize, baseline, wobble } = heroConfig;
 
   const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
   const easeInOut = (p: number) => (p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2);
@@ -117,8 +117,8 @@ const STRIKE =
     const text = section.querySelector<HTMLElement>("[data-text]");
     const hl = section.querySelector<SVGElement>("[data-hl]");
     const strike = section.querySelector<SVGElement>("[data-strike]");
-    const hand = section.querySelector<HTMLImageElement>("img[data-hand]");
-    if (!word || !ink || !text || !hl || !strike || !hand) return;
+    const pencil = section.querySelector<HTMLImageElement>("img[data-pencil]");
+    if (!word || !ink || !text || !hl || !strike || !pencil) return;
 
     let words: string[] = [];
     try {
@@ -134,7 +134,7 @@ const STRIKE =
       text.textContent = words[index] ?? "";
     };
 
-    // Movimiento reducido: sin mano ni animación, la palabra cambia cada 2.6 s
+    // Movimiento reducido: sin lápiz ni animación, la palabra cambia cada 2.6 s
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (reduced.matches) {
       section.classList.add("is-static");
@@ -164,10 +164,10 @@ const STRIKE =
     let raf = 0;
     let running = false;
 
-    function placeHand(x: number, y: number) {
+    function placePencil(x: number, y: number) {
       // La punta del lápiz, escalada al tamaño renderizado, cae sobre (x, y)
-      const scale = hand!.offsetWidth / handSize.width;
-      hand!.style.transform = `translate(${x - pencilTip.x * scale}px, ${y - pencilTip.y * scale}px)`;
+      const scale = pencil!.offsetWidth / pencilSize.width;
+      pencil!.style.transform = `translate(${x - pencilTip.x * scale}px, ${y - pencilTip.y * scale}px)`;
     }
 
     function frame(now: number) {
@@ -189,7 +189,7 @@ const STRIKE =
       const h = text!.offsetHeight;
       const t = elapsed;
       const baseY = h * baseline;
-      // posición de la mano tras resaltar: arriba a la derecha
+      // posición del lápiz tras resaltar: arriba a la derecha
       const awayX = w + h * 0.3;
       const awayY = baseY - h * 0.5;
 
@@ -201,7 +201,7 @@ const STRIKE =
       let hy = baseY;
 
       if (t < ph.p0) {
-        // Pausa: la mano espera al inicio
+        // Pausa: el lápiz espera al inicio
       } else if (t < ph.p1) {
         const p = (t - ph.p0) / ph.write;
         const e = easeInOut(p);
@@ -247,7 +247,7 @@ const STRIKE =
       // clip-path y no stroke-dashoffset: con non-scaling-stroke, Chrome ignora pathLength en el guion
       strike!.style.clipPath = `inset(-50% ${(1 - strikeP) * 100}% -50% -5%)`;
       ink!.style.opacity = String(opacity);
-      placeHand(hx, hy);
+      placePencil(hx, hy);
 
       raf = requestAnimationFrame(frame);
     }
@@ -283,6 +283,7 @@ const STRIKE =
    * y nunca menos que el ancho de la ventana. La sección recorta alrededor de la hoja.
    */
   .hero {
+    z-index: 1;
     --paper: min(92vw, var(--sheet-max), calc((100svh - 140px) * 0.75));
     --sw: max(100vw, calc(var(--paper) / var(--sheet-w)));
     --sh: calc(var(--sw) / var(--bg-ar));
@@ -405,24 +406,22 @@ const STRIKE =
     clip-path: inset(-50% 100% -50% -5%);
   }
 
-  /* La mano */
-  .hw :global(.hw__hand) {
+  /* El lápiz */
+  .hw :global(.hw__pencil) {
     position: absolute;
     left: 0;
     top: 0;
     z-index: 2;
-    width: var(--hand-w);
+    width: var(--pencil-w);
     max-width: none;
     height: auto;
     pointer-events: none;
     user-select: none;
     opacity: 0;
     will-change: transform;
-    /* El antebrazo termina en un corte recto: se desvanece hacia abajo a la derecha */
-    mask-image: linear-gradient(118deg, #000 58%, transparent 80%);
   }
 
-  .hero.is-ready :global(.hw__hand) {
+  .hero.is-ready :global(.hw__pencil) {
     opacity: 1;
     transition: opacity 300ms var(--ease-out);
   }
@@ -436,7 +435,7 @@ const STRIKE =
     clip-path: inset(-20% 100% -20% 0);
   }
 
-  .hero.is-static :global(.hw__hand) {
+  .hero.is-static :global(.hw__pencil) {
     display: none;
   }
 
@@ -471,14 +470,14 @@ const STRIKE =
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .hero :global(.hw__hand) {
+    .hero :global(.hw__pencil) {
       display: none;
     }
   }
 
   @media (max-width: 599.98px) {
-    .hw :global(.hw__hand) {
-      width: var(--hand-w-sm);
+    .hw :global(.hw__pencil) {
+      width: var(--pencil-w-sm);
     }
   }
 </style>

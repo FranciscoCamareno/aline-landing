@@ -30,7 +30,9 @@ const Tag = as;
 >
   <svg class="db__art" viewBox="0 0 200 56" preserveAspectRatio="none" aria-hidden="true" focusable="false">
     <defs>
-      <clipPath id={clipId}><path d={OUTLINE}></path></clipPath>
+      <clipPath id={clipId}>
+        <path d={OUTLINE}></path>
+      </clipPath>
     </defs>
     <g clip-path={`url(#${clipId})`}>
       {variant === "primary" && <path class="db__fill db__fill--rest" d={ZIGZAG} pathLength="1" />}
@@ -39,7 +41,9 @@ const Tag = as;
     <path class="db__line" d={OUTLINE} vector-effect="non-scaling-stroke"></path>
     <path class="db__line db__line--soft" d={OUTLINE_SOFT} vector-effect="non-scaling-stroke"></path>
   </svg>
-  <span class="db__label"><slot /></span>
+  <span class="db__label">
+    <slot />
+  </span>
 </Tag>
 
 <style>

@@ -22,7 +22,8 @@ import { SITE_URL } from "../config/site";
         const m = document.cookie.match(/(?:^|;\s*)lang=(en|es)(?:;|$)/);
         let lang = m ? m[1] : null;
         if (!lang) {
-          const list = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"];
+          const list =
+            navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || "en"];
           lang = "en";
           for (let i = 0; i < list.length; i++) {
             const base = String(list[i]).toLowerCase().split("-")[0];
@@ -38,7 +39,10 @@ import { SITE_URL } from "../config/site";
   </head>
   <body>
     <p style="padding: 24px">
-      <a href="/en/">English</a> · <a href="/es/" lang="es">Español</a>
+      <a href="/en/">English</a> ·{" "}
+      <a href="/es/" lang="es">
+        Español
+      </a>
     </p>
   </body>
 </html>

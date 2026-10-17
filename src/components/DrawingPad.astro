@@ -1,0 +1,676 @@
+---
+/*
+ * Bloc de dibujo: la única zona de la página donde se dibuja.
+ * Dos canvas (resaltador debajo con multiply, lápiz encima) sobre el texto manuscrito decorativo.
+ */
+import DrawnButton from "./DrawnButton.astro";
+import pencilTool from "../assets/landing/tools/pencil.svg";
+import highlighterTool from "../assets/landing/tools/highlighter.svg";
+import eraserTool from "../assets/landing/tools/eraser.svg";
+import undoIcon from "../assets/landing/icons/undo.svg?raw";
+import trashIcon from "../assets/landing/icons/trash.svg?raw";
+import washiYellow from "../assets/landing/doodles/washi-tape-yellow.svg";
+import washiPink from "../assets/landing/doodles/washi-tape-pink.svg";
+import circleDoodle from "../assets/landing/doodles/circle-doodle.svg?raw";
+import arrowDown from "../assets/landing/doodles/arrow-curve-down-left.svg?raw";
+import dotGrid from "../assets/landing/patterns/dot-grid-paper.svg";
+import { getT, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getT(lang).pad;
+const tools = [
+  { id: "pencil", label: t.pencil, src: pencilTool.src, key: "P" },
+  { id: "highlighter", label: t.highlighter, src: highlighterTool.src, key: "H" },
+  { id: "eraser", label: t.eraser, src: eraserTool.src, key: "E" },
+] as const;
+---
+
+<section class="section" id="pencil" aria-labelledby="pad-title">
+  <div class="container">
+    <h2 class="section__title" id="pad-title" data-thread-anchor="pad">
+      {t.title}
+    </h2>
+    <p class="section__sub">{t.sub}</p>
+
+    <div
+      class="pad"
+      role="group"
+      aria-label={t.aria}
+      data-pad
+      data-thread-anchor="pad-end"
+      style={`--dot-grid: url("${dotGrid.src}")`}
+    >
+      <img class="pad__tape pad__tape--left" src={washiYellow.src} width="150" height="32" alt="" />
+      <img class="pad__tape pad__tape--right" src={washiPink.src} width="150" height="32" alt="" />
+
+      <div class="pad__sheet">
+        <p class="pad__bar" aria-hidden="true">
+          <span>scratch.md</span>
+          <span>{t.tag}</span>
+        </p>
+
+        <div class="pad__lines hand" aria-hidden="true">
+          <p>
+            {t.line1.pre}
+            <span class="pad__mine">{t.line1.em}</span>
+            {t.line1.post}
+          </p>
+          <p>{t.line2.pre}</p>
+          <p>
+            {t.line3.pre}
+            <span class="pad__circled">
+              {t.line3.em}
+              <span set:html={circleDoodle} />
+            </span>
+            {t.line3.post}
+          </p>
+          <p>
+            {t.line4.pre}
+            <span class="pad__link">{t.line4.em}</span>
+            {t.line4.post}
+          </p>
+        </div>
+
+        <p class="pad__pick note" aria-hidden="true">
+          {t.pick}
+          <span class="pad__pick-arrow" set:html={arrowDown} />
+        </p>
+
+        <div class="pad__surface" tabindex="-1" data-surface>
+          <canvas class="pad__canvas pad__canvas--hl" data-layer="highlighter"></canvas>
+          <canvas class="pad__canvas" data-layer="pencil"></canvas>
+        </div>
+
+        <div class="pad__unlock" data-unlock hidden>
+          <DrawnButton as="button" variant="primary" size="lg" data-unlock-btn>
+            {t.tapToDraw}
+          </DrawnButton>
+        </div>
+
+        <div class="pad__tray" role="toolbar" aria-label={t.tools}>
+          {tools.map((tool) => (
+            <button
+              class="pad__tool"
+              type="button"
+              aria-pressed={tool.id === "pencil" ? "true" : "false"}
+              aria-label={tool.label}
+              aria-keyshortcuts={tool.key}
+              data-tool={tool.id}
+            >
+              <img src={tool.src} width="48" height="80" alt="" draggable="false" />
+            </button>
+          ))}
+          <span class="pad__sep" aria-hidden="true"></span>
+          <button
+            class="pad__icon-btn"
+            type="button"
+            aria-label={t.undo}
+            aria-keyshortcuts="Control+Z Meta+Z"
+            data-undo
+          >
+            <span class="icon" set:html={undoIcon} />
+          </button>
+          <button class="pad__icon-btn" type="button" aria-label={t.clear} data-clear>
+            <span class="icon" set:html={trashIcon} />
+          </button>
+          <DrawnButton as="button" variant="secondary" class="pad__done" data-done hidden>
+            {t.done}
+          </DrawnButton>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  import { padConfig } from "../config/pad";
+
+  type Tool = "pencil" | "highlighter" | "eraser";
+  type Point = [number, number, number];
+  interface Stroke {
+    tool: "pencil" | "highlighter";
+    points: Point[];
+    pen: boolean;
+  }
+  type GetStroke = (typeof import("perfect-freehand"))["getStroke"];
+
+  function init(pad: HTMLElement) {
+    const surface = pad.querySelector<HTMLElement>("[data-surface]")!;
+    const hlCanvas = pad.querySelector<HTMLCanvasElement>('canvas[data-layer="highlighter"]')!;
+    const inkCanvas = pad.querySelector<HTMLCanvasElement>('canvas[data-layer="pencil"]')!;
+    const toolButtons = [...pad.querySelectorAll<HTMLButtonElement>("[data-tool]")];
+    const unlock = pad.querySelector<HTMLElement>("[data-unlock]")!;
+    const unlockBtn = pad.querySelector<HTMLButtonElement>("[data-unlock-btn]")!;
+    const doneBtn = pad.querySelector<HTMLButtonElement>("[data-done]")!;
+    const hl = hlCanvas.getContext("2d")!;
+    const ink = inkCanvas.getContext("2d")!;
+
+    let getStroke: GetStroke | null = null;
+    let loading: Promise<void> | null = null;
+    const load = () =>
+      (loading ??= import("perfect-freehand").then((m) => {
+        getStroke = m.getStroke;
+        redraw();
+      }));
+
+    const strokes: Stroke[] = [];
+    let current: Stroke | null = null;
+    let tool: Tool = "pencil";
+    let activePointer: number | null = null;
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let frame = 0;
+
+    // Con puntero grueso el bloc arranca bloqueado para no atrapar el scroll
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    let locked = coarse;
+
+    function setLocked(value: boolean) {
+      locked = value;
+      unlock.hidden = !value;
+      doneBtn.hidden = value || !coarse;
+      pad.classList.toggle("is-locked", value);
+    }
+    setLocked(locked);
+
+    function setTool(next: Tool) {
+      tool = next;
+      for (const b of toolButtons) b.setAttribute("aria-pressed", String(b.dataset.tool === next));
+      pad.dataset.activeTool = next;
+    }
+    setTool("pencil");
+
+    function resize() {
+      const rect = surface.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      for (const [c, ctx] of [
+        [hlCanvas, hl],
+        [inkCanvas, ink],
+      ] as const) {
+        c.width = Math.round(width * dpr);
+        c.height = Math.round(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      redraw();
+    }
+
+    function drawStroke(s: Stroke) {
+      if (s.tool === "highlighter") {
+        const [first, ...rest] = s.points;
+        if (!first) return;
+        hl.beginPath();
+        hl.moveTo(first[0], first[1]);
+        if (rest.length === 0) hl.lineTo(first[0] + 0.01, first[1]);
+        for (const p of rest) hl.lineTo(p[0], p[1]);
+        hl.stroke();
+        return;
+      }
+      if (!getStroke) return;
+      const outline = getStroke(s.points, { ...padConfig.pencil, simulatePressure: !s.pen });
+      if (outline.length < 2) return;
+      const path = new Path2D();
+      path.moveTo(outline[0]![0]!, outline[0]![1]!);
+      for (let i = 1; i < outline.length; i++) {
+        const a = outline[i]!;
+        const b = outline[(i + 1) % outline.length]!;
+        path.quadraticCurveTo(a[0]!, a[1]!, (a[0]! + b[0]!) / 2, (a[1]! + b[1]!) / 2);
+      }
+      path.closePath();
+      ink.fill(path);
+    }
+
+    function redraw() {
+      frame = 0;
+      hl.clearRect(0, 0, width, height);
+      ink.clearRect(0, 0, width, height);
+      hl.strokeStyle = padConfig.highlighter.color;
+      hl.lineWidth = padConfig.highlighter.size;
+      hl.lineCap = "round";
+      hl.lineJoin = "round";
+      ink.fillStyle = padConfig.pencil.color;
+      for (const s of strokes) drawStroke(s);
+      if (current) drawStroke(current);
+    }
+
+    const scheduleRedraw = () => {
+      if (!frame) frame = requestAnimationFrame(redraw);
+    };
+
+    const local = (e: PointerEvent): Point => {
+      const rect = surface.getBoundingClientRect();
+      const pressure = e.pointerType === "pen" ? e.pressure || 0.5 : 0.5;
+      return [e.clientX - rect.left, e.clientY - rect.top, pressure];
+    };
+
+    /** Distancia de un punto a un segmento. */
+    function segDist(px: number, py: number, a: Point, b: Point) {
+      const dx = b[0] - a[0];
+      const dy = b[1] - a[1];
+      const len = dx * dx + dy * dy;
+      const t = len ? Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / len)) : 0;
+      return Math.hypot(px - (a[0] + t * dx), py - (a[1] + t * dy));
+    }
+
+    function eraseAt(x: number, y: number) {
+      let changed = false;
+      for (let i = strokes.length - 1; i >= 0; i--) {
+        const s = strokes[i]!;
+        const reach = padConfig.eraser.tolerance + (s.tool === "highlighter" ? padConfig.highlighter.size / 2 : 2);
+        const pts = s.points;
+        const hit =
+          pts.length === 1
+            ? Math.hypot(x - pts[0]![0], y - pts[0]![1]) <= reach
+            : pts.some((p, j) => j > 0 && segDist(x, y, pts[j - 1]!, p) <= reach);
+        if (hit) {
+          strokes.splice(i, 1);
+          changed = true;
+        }
+      }
+      if (changed) scheduleRedraw();
+    }
+
+    // Dibujar: Pointer Events con captura
+    surface.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || activePointer !== null) return;
+      // Bloqueado: el dedo hace scroll; un stylus siempre dibuja
+      if (locked && e.pointerType === "touch") return;
+      void load();
+      surface.focus({ preventScroll: true });
+      activePointer = e.pointerId;
+      surface.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      const p = local(e);
+      if (tool === "eraser") {
+        eraseAt(p[0], p[1]);
+        return;
+      }
+      current = { tool, points: [p], pen: e.pointerType === "pen" };
+      scheduleRedraw();
+    });
+
+    surface.addEventListener("pointermove", (e) => {
+      if (e.pointerId !== activePointer) return;
+      const events = typeof e.getCoalescedEvents === "function" ? e.getCoalescedEvents() : [e];
+      for (const ev of events.length ? events : [e]) {
+        const p = local(ev);
+        if (tool === "eraser") eraseAt(p[0], p[1]);
+        else current?.points.push(p);
+      }
+      if (current) scheduleRedraw();
+    });
+
+    const end = (e: PointerEvent) => {
+      if (e.pointerId !== activePointer) return;
+      activePointer = null;
+      if (current) {
+        strokes.push(current);
+        current = null;
+        scheduleRedraw();
+      }
+    };
+    surface.addEventListener("pointerup", end);
+    surface.addEventListener("pointercancel", end);
+
+    const undo = () => {
+      if (strokes.pop()) scheduleRedraw();
+    };
+    const clear = () => {
+      strokes.length = 0;
+      scheduleRedraw();
+    };
+
+    for (const b of toolButtons) b.addEventListener("click", () => setTool(b.dataset.tool as Tool));
+    pad.querySelector("[data-undo]")!.addEventListener("click", undo);
+    pad.querySelector("[data-clear]")!.addEventListener("click", clear);
+    unlockBtn.addEventListener("click", () => {
+      setLocked(false);
+      void load();
+      doneBtn.focus({ preventScroll: true });
+    });
+    doneBtn.addEventListener("click", () => {
+      setLocked(true);
+      unlockBtn.focus({ preventScroll: true });
+    });
+
+    // Atajos solo con el foco dentro del bloc
+    pad.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const map: Record<string, Tool> = { p: "pencil", h: "highlighter", e: "eraser" };
+      const next = map[e.key.toLowerCase()];
+      if (next) {
+        e.preventDefault();
+        setTool(next);
+      }
+    });
+
+    new ResizeObserver(() => resize()).observe(surface);
+
+    // perfect-freehand se carga solo cuando el bloc se acerca al viewport
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          void load();
+          io.disconnect();
+        }
+      },
+      { rootMargin: "400px 0px" },
+    );
+    io.observe(pad);
+  }
+
+  for (const pad of document.querySelectorAll<HTMLElement>("[data-pad]")) init(pad);
+</script>
+
+<style>
+  .pad {
+    position: relative;
+    max-width: 1040px;
+    margin-inline: auto;
+  }
+
+  .pad__sheet {
+    position: relative;
+    height: 580px;
+    overflow: hidden;
+    border: 2px solid var(--border-ink);
+    border-radius: 20px;
+    background-color: var(--bg-canvas);
+    background-image: var(--dot-grid);
+    background-size: 24px 24px;
+    box-shadow: 0 8px 0 var(--border-soft);
+  }
+
+  .pad__tape {
+    position: absolute;
+    top: -6px;
+    z-index: 3;
+    width: 150px;
+    height: 32px;
+    pointer-events: none;
+  }
+
+  .pad__tape--left {
+    left: -42px;
+    transform: rotate(-38deg);
+  }
+
+  .pad__tape--right {
+    right: -42px;
+    transform: rotate(38deg);
+  }
+
+  .pad__bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0;
+    padding: 16px 72px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .pad__lines {
+    position: absolute;
+    top: 70px;
+    left: 64px;
+    right: 48px;
+    font-size: 34px;
+    line-height: 1.75;
+    color: var(--text-primary);
+  }
+
+  .pad__lines p {
+    margin: 0;
+  }
+
+  .pad__mine {
+    color: var(--text-accent);
+  }
+
+  .pad__link {
+    color: var(--link);
+  }
+
+  .pad__circled {
+    position: relative;
+    display: inline-block;
+  }
+
+  .pad__circled > span {
+    position: absolute;
+    inset: -0.18em -0.3em -0.1em -0.3em;
+    pointer-events: none;
+  }
+
+  .pad__circled :global(svg) {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    overflow: visible;
+  }
+
+  .pad__pick {
+    position: absolute;
+    right: calc(50% + 170px);
+    bottom: 34px;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  .pad__pick-arrow {
+    display: block;
+    width: 40px;
+    height: 34px;
+    transform: scaleX(-1) rotate(-20deg);
+    transform-origin: center;
+  }
+
+  /* Sin z-index: un contexto de apilamiento aislaría el multiply del resaltador */
+  .pad__surface {
+    position: absolute;
+    inset: 0;
+    touch-action: none;
+    cursor: crosshair;
+    outline: none;
+  }
+
+  .pad[data-active-tool="eraser"] .pad__surface {
+    cursor: cell;
+  }
+
+  .pad.is-locked .pad__surface {
+    touch-action: auto;
+  }
+
+  .pad__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* El texto se ve a través del amarillo, como un resaltador de verdad */
+  .pad__canvas--hl {
+    mix-blend-mode: multiply;
+  }
+
+  .pad__unlock {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: end center;
+    /* Debajo del texto manuscrito y por encima de la bandeja */
+    padding-bottom: 112px;
+    pointer-events: none;
+  }
+
+  .pad__unlock[hidden] {
+    display: none;
+  }
+
+  .pad__unlock :global(.db) {
+    pointer-events: auto;
+    background: var(--bg-canvas);
+    border-radius: 12px;
+  }
+
+  .pad__tray {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    z-index: 2;
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 76px;
+    padding: 0 14px;
+    overflow: hidden;
+    border: 2px solid var(--border-soft);
+    border-bottom: 0;
+    border-radius: 20px 20px 0 0;
+    background: var(--bg-panel);
+    transform: translateX(-50%);
+  }
+
+  .pad__tool {
+    width: 48px;
+    height: 76px;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .pad__tool img {
+    width: 48px;
+    height: 80px;
+    transform: translateY(24px);
+    transition: transform 120ms ease-out;
+  }
+
+  @media (hover: hover) {
+    .pad__tool:hover img {
+      transform: translateY(18px);
+    }
+  }
+
+  .pad__tool[aria-pressed="true"] img {
+    transform: translateY(6px);
+  }
+
+  .pad__tool:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+    border-radius: 10px;
+  }
+
+  .pad__sep {
+    align-self: center;
+    width: 1.5px;
+    height: 34px;
+    margin: 0 4px;
+    background: var(--border-soft);
+  }
+
+  .pad__icon-btn {
+    display: grid;
+    place-items: center;
+    align-self: center;
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: none;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+
+  .pad__icon-btn .icon {
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (hover: hover) {
+    .pad__icon-btn:hover {
+      background: var(--selection-soft);
+    }
+  }
+
+  .pad__tray :global(.pad__done) {
+    align-self: center;
+    margin-left: 6px;
+  }
+
+  .pad__tray :global(.pad__done[hidden]) {
+    display: none;
+  }
+
+  @media (max-width: 599.98px) {
+    .pad__sheet {
+      height: 440px;
+    }
+
+    .pad__bar {
+      padding: 14px 20px 0;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .pad__lines {
+      top: 74px;
+      left: 22px;
+      right: 18px;
+      font-size: 22px;
+    }
+
+    .pad__pick {
+      display: none;
+    }
+
+    .pad__tray {
+      gap: 2px;
+      padding: 0 8px;
+    }
+
+    .pad__tape {
+      width: 110px;
+      height: 24px;
+    }
+
+    .pad__tape--left {
+      left: -30px;
+    }
+
+    .pad__tape--right {
+      right: -30px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pad__tool img {
+      transition: none;
+    }
+  }
+</style>

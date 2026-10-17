@@ -1,0 +1,104 @@
+---
+/* Eco estático del hero: misma primera palabra y sufijo, sin animación. Aquí termina el hilo. */
+import DrawnButton from "./DrawnButton.astro";
+import { APP_URL, INSTALL_URL } from "../config/site";
+import { getT, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getT(lang);
+const word = t.hero.words[0] ?? "";
+const HIGHLIGHT = "M6 12 C 50 6, 140 8, 194 10 C 198 18, 197 28, 192 32 C 140 36, 60 34, 8 33 C 3 26, 3 18, 6 12 Z";
+---
+
+<section class="section final" aria-labelledby="final-title">
+  <div class="container final__inner">
+    <h2 class="final__title" id="final-title" data-thread-anchor="end">
+      <span class="final__line">{t.hero.line1}</span>
+      <span class="final__line">
+        <span class="final__word hand">
+          <svg class="final__hl" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true">
+            <path d={HIGHLIGHT}></path>
+          </svg>
+          <span class="final__text">{word}</span>
+        </span>
+        {t.hero.suffix}
+      </span>
+    </h2>
+    <div class="final__ctas">
+      <DrawnButton href={APP_URL} variant="primary" size="lg">
+        {t.cta.open}
+      </DrawnButton>
+      <DrawnButton href={INSTALL_URL} variant="secondary" size="lg">
+        {t.cta.installApp}
+      </DrawnButton>
+    </div>
+  </div>
+</section>
+
+<style>
+  .final {
+    padding-top: 170px;
+    padding-bottom: 100px;
+  }
+
+  .final__inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .final__title {
+    margin: 0 0 40px;
+    font-weight: 900;
+    font-size: clamp(44px, 6.4vw, 92px);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+  }
+
+  .final__line {
+    display: block;
+  }
+
+  .final__word {
+    position: relative;
+    display: inline-block;
+    font-size: 1.12em;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+
+  .final__text {
+    position: relative;
+  }
+
+  .final__hl {
+    position: absolute;
+    left: -0.06em;
+    top: 52%;
+    width: calc(100% + 0.12em);
+    height: 0.4em;
+    max-width: none;
+    overflow: visible;
+    fill: var(--brand);
+    transform: rotate(-1.5deg);
+  }
+
+  .final__ctas {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px 20px;
+  }
+
+  @media (max-width: 959.98px) {
+    .final {
+      padding-top: 120px;
+      padding-bottom: 80px;
+    }
+  }
+</style>

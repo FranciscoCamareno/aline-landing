@@ -1,0 +1,85 @@
+---
+import wordmark from "../assets/landing/logo/aline-wordmark.svg";
+import LangSwitch from "./LangSwitch.astro";
+import { CHANGELOG_URL, PRIVACY_URL } from "../config/site";
+import { getT, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getT(lang);
+---
+
+<footer class="footer">
+  <div class="container footer__inner">
+    <img class="footer__logo" src={wordmark.src} width="61" height="26" alt="aline" />
+    <p class="footer__slogan">{t.hero.title}</p>
+    <nav class="footer__links" aria-label={t.footer.label}>
+      <a href={CHANGELOG_URL}>{t.footer.changelog}</a>
+      <a href={PRIVACY_URL}>{t.footer.privacy}</a>
+      <LangSwitch lang={lang} />
+    </nav>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    position: relative;
+    z-index: 1;
+    background: var(--bg-panel);
+    border-top: 1.5px solid var(--border-soft);
+  }
+
+  .footer__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 24px;
+    padding-block: 28px;
+  }
+
+  .footer__logo {
+    width: auto;
+    height: 26px;
+  }
+
+  .footer__slogan {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+
+  .footer__links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 14px;
+    margin-left: auto;
+  }
+
+  .footer__links > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 6px;
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  @media (hover: hover) {
+    .footer__links > a:hover {
+      text-decoration: underline;
+    }
+  }
+
+  @media (max-width: 599.98px) {
+    .footer__links {
+      margin-left: -6px;
+    }
+  }
+</style>

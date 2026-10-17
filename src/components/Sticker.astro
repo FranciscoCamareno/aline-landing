@@ -11,7 +11,14 @@ const { label } = Astro.props;
 
 <button class="sticker" type="button" aria-label={label} data-sticker>
   <img class="sticker__img sticker__img--rest" src={sticker.src} width="140" height="60" alt="" draggable="false" />
-  <img class="sticker__img sticker__img--peel" src={stickerPeeling.src} width="140" height="60" alt="" draggable="false" />
+  <img
+    class="sticker__img sticker__img--peel"
+    src={stickerPeeling.src}
+    width="140"
+    height="60"
+    alt=""
+    draggable="false"
+  />
 </button>
 
 <script>
@@ -325,7 +332,10 @@ const { label } = Astro.props;
   }
 
   .sticker.is-settling {
-    transition: transform 420ms var(--ease-spring), left 220ms var(--ease-out), top 220ms var(--ease-out);
+    transition:
+      transform 420ms var(--ease-spring),
+      left 220ms var(--ease-out),
+      top 220ms var(--ease-out);
   }
 
   .sticker.is-returning {

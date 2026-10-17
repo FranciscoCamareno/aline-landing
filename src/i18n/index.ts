@@ -21,6 +21,82 @@ export interface Dict {
     sub: string;
     runsIn: string;
   };
+  peek: {
+    aria: string;
+    tab1: string;
+    tab2: string;
+    groupNotes: string;
+    groupDocs: string;
+    groupCanvases: string;
+    groupCalendar: string;
+    note1: string;
+    note2: string;
+    note3: string;
+    docs: string;
+    calendar: string;
+    open: string;
+    noteBody: string;
+    chapter: string;
+    sticky1: string;
+    sticky2: string;
+    sticky3: string;
+    day: string;
+    due: string;
+    swipe: string;
+  };
+  ways: {
+    title: string;
+    sub: string;
+    notes: Feature;
+    docs: Feature;
+    diagrams: Feature;
+    calendar: Feature;
+  };
+  pad: {
+    title: string;
+    sub: string;
+    tag: string;
+    /** Líneas manuscritas del bloc: `em` es la parte destacada de cada una. */
+    line1: PadLine;
+    line2: PadLine;
+    line3: PadLine;
+    line4: PadLine;
+    pick: string;
+    tapToDraw: string;
+    done: string;
+    aria: string;
+    tools: string;
+    pencil: string;
+    highlighter: string;
+    eraser: string;
+    undo: string;
+    clear: string;
+  };
+  facts: {
+    title: string;
+    markdown: Fact;
+    local: Fact;
+    excalidraw: Fact;
+    languages: Fact;
+  };
+  footer: { changelog: string; privacy: string; label: string };
+}
+
+export interface Feature {
+  title: string;
+  body: string;
+  note: string;
+}
+
+export interface Fact {
+  title: string;
+  body: string;
+}
+
+export interface PadLine {
+  pre: string;
+  em: string;
+  post: string;
 }
 
 const dicts: Record<Lang, Dict> = { en, es };

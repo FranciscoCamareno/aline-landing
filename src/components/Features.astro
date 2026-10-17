@@ -1,0 +1,123 @@
+---
+import notesIcon from "../assets/landing/icons/notes.svg?raw";
+import docsIcon from "../assets/landing/icons/docs.svg?raw";
+import diagramsIcon from "../assets/landing/icons/diagrams.svg?raw";
+import calendarIcon from "../assets/landing/icons/calendar.svg?raw";
+import { getT, type Lang } from "../i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const t = getT(lang).ways;
+
+// Fondos de la casilla del icono: mantequilla, agua, rosa y brote (decoración)
+const cards = [
+  { ...t.notes, icon: notesIcon, bg: "var(--brand)", tilt: -0.6 },
+  { ...t.docs, icon: docsIcon, bg: "var(--sticker-agua)", tilt: 0.5 },
+  { ...t.diagrams, icon: diagramsIcon, bg: "var(--sticker-rosa)", tilt: -0.4 },
+  { ...t.calendar, icon: calendarIcon, bg: "var(--sticker-brote)", tilt: 0.7 },
+];
+---
+
+<section class="section" id="features" aria-labelledby="ways-title">
+  <div class="container">
+    <h2 class="section__title" id="ways-title" data-thread-anchor="ways">
+      {t.title}
+    </h2>
+    <p class="section__sub">{t.sub}</p>
+
+    <ul class="ways" data-thread-anchor="ways-end">
+      {cards.map((c) => (
+        <li class="way" style={`--tilt: ${c.tilt}deg`}>
+          <span class="way__icon icon" style={`background: ${c.bg}`} set:html={c.icon} />
+          <h3 class="way__title">{c.title}</h3>
+          <p class="way__body">{c.body}</p>
+          <p class="way__note note" aria-hidden="true">
+            {c.note}
+          </p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<style>
+  .ways {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 28px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .way {
+    display: flex;
+    flex-direction: column;
+    padding: 26px;
+    border: 2px solid var(--border-ink);
+    border-radius: 20px;
+    background: var(--bg-canvas);
+    transform: rotate(var(--tilt));
+    transition: transform 200ms var(--ease-out);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .way:hover {
+      transform: rotate(0deg) translateY(-3px);
+    }
+  }
+
+  .way__icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 18px;
+    padding: 12px;
+    border: 2px solid var(--border-ink);
+    border-radius: 14px;
+    color: var(--text-primary);
+  }
+
+  .way__title {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 900;
+    line-height: 1.15;
+  }
+
+  .way__body {
+    flex: 1;
+    margin: 0 0 14px;
+    color: var(--text-secondary);
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+
+  .way__note {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  @media (max-width: 959.98px) {
+    .ways {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 599.98px) {
+    .ways {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .way {
+      transition: none;
+    }
+  }
+</style>
