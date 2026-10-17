@@ -3,8 +3,6 @@ import { Picture } from "astro:assets";
 import DrawnButton from "./DrawnButton.astro";
 import heroBg from "../assets/hero/aline-hero-img.jpg";
 import hand from "../assets/hero/aline-mano.webp";
-import washiYellow from "../assets/landing/doodles/washi-tape-yellow.svg";
-import washiBlue from "../assets/landing/doodles/washi-tape-blue.svg";
 import { APP_URL, INSTALL_URL } from "../config/site";
 import { heroConfig } from "../config/hero";
 import { getT, type Lang } from "../i18n";
@@ -17,75 +15,88 @@ const { lang } = Astro.props;
 const t = getT(lang);
 const firstWord = t.hero.words[0] ?? "";
 
+const { sheet, bgSize } = heroConfig;
 const cssVars = [
-  `--hero-bg-pos: ${heroConfig.bgPosition.desktop}`,
-  `--hero-bg-pos-sm: ${heroConfig.bgPosition.mobile}`,
+  `--bg-ar: ${bgSize.width / bgSize.height}`,
+  `--sheet-cx: ${sheet.cx / 100}`,
+  `--sheet-cy: ${sheet.cy / 100}`,
+  `--sheet-w: ${sheet.w / 100}`,
+  `--sheet-h: ${sheet.h / 100}`,
+  `--sheet-rot: ${sheet.rotate}deg`,
+  `--sheet-max: ${heroConfig.sheetMaxPx}px`,
   `--hand-w: ${heroConfig.handWidthEm.desktop}em`,
   `--hand-w-sm: ${heroConfig.handWidthEm.mobile}em`,
 ].join("; ");
 
 // Forma del resaltador (doodles/highlight-bar.svg) y del tachado (doodles/strike-scribble.svg), animadas inline
 const HIGHLIGHT = "M6 12 C 50 6, 140 8, 194 10 C 198 18, 197 28, 192 32 C 140 36, 60 34, 8 33 C 3 26, 3 18, 6 12 Z";
-const STRIKE = "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L66 13 L72 28 L80 14 L86 27 L94 16 L98 22";
+const STRIKE =
+  "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L66 13 L72 28 L80 14 L86 27 L94 16 L98 22";
 ---
 
 <section class="hero" id="top" style={cssVars} data-hero>
-  <Picture
-    class="hero__bg"
-    src={heroBg}
-    alt=""
-    formats={["avif", "webp"]}
-    fallbackFormat="jpg"
-    widths={[640, 960, 1440, 1920, 2560]}
-    sizes="100vw"
-    quality={55}
-    loading="eager"
-    fetchpriority="high"
-  />
+  <!-- Opción A: el escritorio pintado ya trae la hoja; el contenido se coloca encima,
+       en coordenadas relativas a la imagen (config/hero.ts → sheet) -->
+  <div class="hero__stage">
+    <Picture
+      class="hero__bg"
+      src={heroBg}
+      alt=""
+      formats={["avif", "webp"]}
+      fallbackFormat="jpg"
+      widths={[640, 960, 1440, 1920, 2560]}
+      sizes="(max-width: 599px) 1140px, (max-width: 1969px) 1970px, 100vw"
+      quality={55}
+      loading="eager"
+      fetchpriority="high"
+    />
 
-  <div class="hero__sheet">
-    <img class="hero__tape hero__tape--left" src={washiYellow.src} width="150" height="32" alt="" />
-    <img class="hero__tape hero__tape--right" src={washiBlue.src} width="150" height="32" alt="" />
+    <div class="hero__sheet">
+      <h1 class="hero__title">
+        <span class="sr-only">{t.hero.title}</span>
+        <span aria-hidden="true">
+          <span class="hero__line">{t.hero.line1}</span>
+          <span class="hero__line hero__line--nowrap">
+            <span class="hw" data-hero-word data-words={JSON.stringify(t.hero.words)}>
+              <span class="hw__ink" data-ink>
+                <svg class="hw__hl" viewBox="0 0 200 40" preserveAspectRatio="none" data-hl>
+                  <path d={HIGHLIGHT}></path>
+                </svg>
+                <span class="hw__text hand" data-text>
+                  {firstWord}
+                </span>
+                <svg class="hw__strike" viewBox="0 0 100 40" preserveAspectRatio="none" data-strike>
+                  <path d={STRIKE} vector-effect="non-scaling-stroke"></path>
+                </svg>
+              </span>
+              <Picture
+                class="hw__hand"
+                src={hand}
+                alt=""
+                formats={["avif", "webp"]}
+                widths={[480, 800, 1200]}
+                sizes="(max-width: 599px) 240px, 640px"
+                quality={70}
+                loading="eager"
+                data-hand
+              />
+            </span>
+            {t.hero.suffix}
+          </span>
+        </span>
+      </h1>
 
-    <h1 class="hero__title">
-      <span class="sr-only">{t.hero.title}</span>
-      <span aria-hidden="true">
-        <span class="hero__line">{t.hero.line1}</span>
-        <span class="hero__line hero__line--nowrap"
-          ><span class="hw" data-hero-word data-words={JSON.stringify(t.hero.words)}
-            ><span class="hw__ink" data-ink
-              ><svg class="hw__hl" viewBox="0 0 200 40" preserveAspectRatio="none" data-hl>
-                <path d={HIGHLIGHT}></path>
-              </svg><span class="hw__text hand" data-text>{firstWord}</span><svg
-                class="hw__strike"
-                viewBox="0 0 100 40"
-                preserveAspectRatio="none"
-                data-strike
-              >
-                <path d={STRIKE} vector-effect="non-scaling-stroke"></path>
-              </svg></span
-            ><Picture
-              class="hw__hand"
-              src={hand}
-              alt=""
-              formats={["avif", "webp"]}
-              widths={[480, 800, 1200]}
-              sizes="(max-width: 599px) 240px, 640px"
-              quality={70}
-              loading="eager"
-              data-hand
-            /></span
-          >{t.hero.suffix}</span
-        >
-      </span>
-    </h1>
+      <p class="hero__sub">{t.hero.sub}</p>
 
-    <p class="hero__sub">{t.hero.sub}</p>
-
-    <div class="hero__ctas">
-      <DrawnButton href={APP_URL} variant="primary" size="lg">{t.cta.open}</DrawnButton>
-      <DrawnButton href={INSTALL_URL} variant="secondary" size="lg">{t.cta.installApp}</DrawnButton>
-      <p class="hero__runs hand">{t.hero.runsIn}</p>
+      <div class="hero__ctas">
+        <DrawnButton href={APP_URL} variant="primary" size="lg">
+          {t.cta.open}
+        </DrawnButton>
+        <DrawnButton href={INSTALL_URL} variant="secondary" size="lg">
+          {t.cta.installApp}
+        </DrawnButton>
+        <p class="hero__runs hand">{t.hero.runsIn}</p>
+      </div>
     </div>
   </div>
 </section>
@@ -267,66 +278,64 @@ const STRIKE = "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L6
 </script>
 
 <style>
+  /*
+   * Opción A. El fondo escala para que la hoja pintada mida --paper de ancho,
+   * y nunca menos que el ancho de la ventana. La sección recorta alrededor de la hoja.
+   */
   .hero {
+    --paper: min(92vw, var(--sheet-max), calc((100svh - 140px) * 0.75));
+    --sw: max(100vw, calc(var(--paper) / var(--sheet-w)));
+    --sh: calc(var(--sw) / var(--bg-ar));
     position: relative;
     overflow: hidden;
-    padding: 72px 24px 112px;
-    background: var(--bg-panel);
+    /* alto de la hoja girada + margen */
+    height: calc(var(--sw) * var(--sheet-w) * 1.4 + 64px);
+    background: #8a5a3c;
     scroll-margin-top: 76px;
   }
 
-  /* Capa 1: escritorio pintado */
+  .hero__stage {
+    position: absolute;
+    left: calc(50% - var(--sw) * var(--sheet-cx));
+    top: calc(50% - var(--sh) * var(--sheet-cy));
+    width: var(--sw);
+    height: var(--sh);
+  }
+
   .hero :global(.hero__bg) {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     max-width: none;
-    object-fit: cover;
-    object-position: var(--hero-bg-pos);
   }
 
-  /* Capa 2: la hoja */
+  /* El contenido, encima de la hoja pintada y girado con ella */
   .hero__sheet {
-    position: relative;
-    max-width: 1120px;
-    margin-inline: auto;
-    padding: 76px 88px 84px;
-    background-color: var(--bg-canvas);
-    background-image: radial-gradient(#efe7d2 1.2px, transparent 1.4px);
-    background-size: 24px 24px;
-    background-position: 12px 12px;
-    border-radius: 3px;
-    box-shadow:
-      0 1px 0 rgba(80, 55, 20, 0.1),
-      0 22px 44px rgba(80, 55, 20, 0.22);
-    transform: rotate(-0.7deg);
-  }
-
-  .hero__tape {
     position: absolute;
-    top: -14px;
-    width: 150px;
-    height: 32px;
-    pointer-events: none;
+    left: calc(var(--sheet-cx) * 100%);
+    top: calc(var(--sheet-cy) * 100%);
+    width: calc(var(--sheet-w) * 100%);
+    height: calc(var(--sheet-h) * 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    container-type: inline-size;
+    transform: translate(-50%, -50%) rotate(var(--sheet-rot));
   }
 
-  .hero__tape--left {
-    left: -34px;
-    transform: rotate(-32deg);
-  }
-
-  .hero__tape--right {
-    right: -34px;
-    transform: rotate(28deg);
+  .hero__sheet > * {
+    /* cqi se resuelve contra la hoja: todo escala con ella */
+    min-width: 0;
+    padding-inline: 8cqi;
   }
 
   .hero__title {
     position: relative;
     z-index: 1;
-    margin: 0 0 28px;
+    margin: 0 0 4cqi;
     font-weight: 900;
-    font-size: clamp(46px, 8vw, 116px);
+    font-size: 12.5cqi;
     line-height: 1.04;
     letter-spacing: -0.025em;
   }
@@ -339,11 +348,11 @@ const STRIKE = "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L6
     white-space: nowrap;
   }
 
-  /* Palabra manuscrita */
+  /* Palabra manuscrita: a 1em, "Resuélvelo." tiene que caber en el ancho de la hoja */
   .hw {
     position: relative;
     display: inline-block;
-    font-size: 1.16em;
+    font-size: 1em;
     line-height: 1;
     letter-spacing: 0;
   }
@@ -396,7 +405,7 @@ const STRIKE = "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L6
     clip-path: inset(-50% 100% -50% -5%);
   }
 
-  /* Capa 3: la mano */
+  /* La mano */
   .hw :global(.hw__hand) {
     position: absolute;
     left: 0;
@@ -433,11 +442,10 @@ const STRIKE = "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L6
 
   .hero__sub {
     position: relative;
-    max-width: 620px;
-    margin: 0 0 36px;
+    margin: 0 0 5cqi;
     color: var(--text-secondary);
-    font-size: 20px;
-    line-height: 1.55;
+    font-size: max(14px, 3.6cqi);
+    line-height: 1.5;
   }
 
   .hero__ctas {
@@ -445,13 +453,20 @@ const STRIKE = "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L6
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 16px 20px;
+    gap: 3cqi 3cqi;
+  }
+
+  .hero__ctas :global(.db) {
+    min-height: max(44px, 10.5cqi);
+    padding: 0 5cqi;
+    font-size: max(14px, 3.6cqi);
   }
 
   .hero__runs {
+    flex-basis: 100%;
     margin: 0;
     color: var(--text-accent);
-    font-size: 20px;
+    font-size: max(15px, 4cqi);
     line-height: 1.2;
   }
 
@@ -461,60 +476,9 @@ const STRIKE = "M2 22 L10 14 L16 28 L24 12 L30 30 L38 13 L44 29 L52 12 L58 30 L6
     }
   }
 
-  @media (max-width: 959.98px) {
-    .hero {
-      padding: 56px 20px 88px;
-    }
-
-    .hero__sheet {
-      padding: 48px 28px;
-    }
-  }
-
   @media (max-width: 599.98px) {
-    .hero {
-      padding: 40px 12px 72px;
-    }
-
-    .hero :global(.hero__bg) {
-      object-position: var(--hero-bg-pos-sm);
-    }
-
-    /* "Resuélvelo" tiene que caber a 375 px */
-    .hw {
-      font-size: 1em;
-    }
-
     .hw :global(.hw__hand) {
       width: var(--hand-w-sm);
-    }
-
-    .hero__sub {
-      font-size: 18px;
-    }
-
-    .hero__tape {
-      width: 110px;
-      height: 24px;
-    }
-
-    .hero__tape--left {
-      left: -26px;
-    }
-
-    .hero__tape--right {
-      right: -26px;
-    }
-  }
-
-  /* Muy estrecho: "Resuélvelo." necesita ~316px a 46px */
-  @media (max-width: 419.98px) {
-    .hero {
-      padding-inline: 8px;
-    }
-
-    .hero__sheet {
-      padding: 44px 20px;
     }
   }
 </style>
