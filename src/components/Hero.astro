@@ -83,7 +83,10 @@ const STRIKE =
                 loading="eager"
                 data-pencil
               />
-            </span><span class="hero__suffix" data-suffix>{t.hero.suffix}</span>
+            </span>
+            <span class="hero__suffix" data-suffix>
+              {t.hero.suffix}
+            </span>
           </span>
         </span>
       </h1>
@@ -321,16 +324,20 @@ const STRIKE =
     position: relative;
     overflow: hidden;
     /* alto de la hoja girada + margen */
-    height: calc(var(--sw) * var(--sheet-w) * 1.4 + 64px);
+    /*
+     * Sin franja de nav, el logo y la libreta flotan encima: la hoja baja todo lo que permite el
+     * escritorio pintado (el fondo arranca en el borde superior) y la sección termina bajo ella.
+     */
+    height: calc(var(--sh) * (var(--sheet-cy) + var(--sheet-h) / 2) + 40px);
     background: #8a5a3c;
-    scroll-margin-top: 76px;
+    scroll-margin-top: 0;
   }
 
   .hero__stage {
     position: absolute;
     background: var(--hero-lqip) center / 100% 100% no-repeat;
     left: calc(50% - var(--sw) * var(--sheet-cx));
-    top: calc(50% - var(--sh) * var(--sheet-cy));
+    top: 0;
     width: var(--sw);
     height: var(--sh);
   }

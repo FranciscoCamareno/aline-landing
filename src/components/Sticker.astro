@@ -23,8 +23,10 @@ const { label } = Astro.props;
 
 <script>
   const STORE_KEY = "aline.sticker";
-  /** Margen transparente del SVG alrededor del sticker visible (140×60 → 132×52). */
-  const INSET = 4;
+  /** Margen transparente del SVG alrededor del sticker visible (4px de 140; escala con el logo). */
+  const INSET_RATIO = 4 / 140;
+  /** Giro del sticker pegado en su troquel. */
+  const DOCK_ROT = -2;
   const EDGE = 8;
   const DRAG_THRESHOLD = 5;
   const RETURN_MS = 400;
@@ -55,12 +57,14 @@ const { label } = Astro.props;
   function init(el: HTMLButtonElement) {
     const slot = el.closest<HTMLElement>("[data-sticker-slot]");
     if (!slot) return;
+    // El troquel de la hoja de respaldo: a su centro vuelve el sticker
+    const die = slot.querySelector<HTMLElement>("[data-sticker-die]") ?? slot;
     const pencilLink = slot.querySelector<HTMLAnchorElement>("[data-sticker-under]");
 
     let loose = false;
     let x = 0;
     let y = 0;
-    let rot = -4;
+    let rot = DOCK_ROT;
     let scale = 1;
     let returning = false;
 
@@ -78,8 +82,11 @@ const { label } = Astro.props;
 
     const size = () => ({ w: el.offsetWidth, h: el.offsetHeight });
 
+    const inset = () => el.offsetWidth * INSET_RATIO;
+
     function bounds() {
       const { w, h } = size();
+      const INSET = inset();
       const vw = document.documentElement.clientWidth;
       const vh = window.innerHeight;
       return {
@@ -152,10 +159,12 @@ const { label } = Astro.props;
     function stickBack() {
       if (!loose || returning) return;
       returning = true;
-      const slotRect = slot!.getBoundingClientRect();
-      x = slotRect.left - INSET;
-      y = slotRect.top - INSET;
-      rot = -4;
+      // Centro del troquel (el giro no mueve el centro del rectángulo)
+      const r = die.getBoundingClientRect();
+      const { w, h } = size();
+      x = r.left + r.width / 2 - w / 2;
+      y = r.top + r.height / 2 - h / 2;
+      rot = DOCK_ROT;
       scale = 1;
       tilt = 0;
       el.classList.remove("is-lifted", "is-settling");
@@ -300,13 +309,14 @@ const { label } = Astro.props;
 </script>
 
 <style>
+  /* Pegado: centrado en el troquel de la hoja de respaldo (--k escala el logo en pantallas estrechas) */
   .sticker {
     position: absolute;
-    left: -4px;
-    top: -4px;
+    left: calc(12px * var(--k, 1));
+    top: calc(10px * var(--k, 1));
     z-index: 2;
-    width: 140px;
-    height: 60px;
+    width: calc(140px * var(--k, 1));
+    height: calc(60px * var(--k, 1));
     padding: 0;
     border: 0;
     border-radius: var(--radius-md);
@@ -316,7 +326,7 @@ const { label } = Astro.props;
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
-    transform: rotate(-4deg);
+    transform: rotate(-2deg);
     transform-origin: 50% 50%;
   }
 
@@ -352,8 +362,8 @@ const { label } = Astro.props;
   .sticker__img {
     position: absolute;
     inset: 0;
-    width: 140px;
-    height: 60px;
+    width: 100%;
+    height: 100%;
     max-width: none;
     pointer-events: none;
     /* Equivalentes en drop-shadow de --shadow-sticker y --shadow-lifted,

@@ -8,7 +8,7 @@ export const DEFAULT_LANG: Lang = "en";
 /** Forma compartida del copy: si falta una clave en un idioma, falla la compilación. */
 export interface Dict {
   meta: { title: string; description: string };
-  nav: { label: string; features: string; pencil: string; why: string; install: string };
+  nav: { label: string; install: string };
   cta: { open: string; installApp: string };
   sticker: { hint: string; aria: string };
   lang: { aria: string };

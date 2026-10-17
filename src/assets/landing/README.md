@@ -87,3 +87,32 @@ Tamaños: 16px en listas, 20px en botones, 24px en encabezados. En las tarjetas 
 | Madera | `#F1D3A6` | Madera del lápiz |
 
 Si ya tienes la carpeta `brand/` del sistema de diseño de la app, sus iconos de herramientas e interfaz son la versión canónica. Estos están hechos a medida de la landing y siguen las mismas reglas, pero si alguno se duplica, gana el de `brand/`.
+
+## Añadidos (nav flotante y notas adhesivas)
+
+### `logo/sticker-backing.svg` (164×80)
+La hoja de respaldo del sticker: papel con el troquel punteado donde va pegado. Debajo del sticker, dentro del troquel, va `logo/aline-pencil.svg`. Al despegar el sticker queda a la vista "aline" a lápiz sobre papel, que es lo que resuelve el contraste sobre el arte pintado. En la página se gira −2° y lleva sombra por CSS.
+
+### `nav/`
+| Archivo | Uso |
+|---|---|
+| `notebook-edge.svg` (40×118) | Borde izquierdo de la hoja de libreta: perforaciones y restos de papel arrancado. Va a la izquierda de un `div` del mismo color (`#FBF7EA`) que crece con el contenido, así la hoja se adapta al ancho sin deformar los agujeros |
+| `notebook-page.svg` (380×118) | La hoja completa, como referencia visual |
+
+Renglones: líneas de 1px en `#C9D3D3` a 48px y 108px del borde superior. Esquina superior derecha redondeada a 16px.
+
+### `notes/`
+| Archivo | Uso |
+|---|---|
+| `sticky-mantequilla/agua/rosa/brote.svg` (260×280) | Las notas como referencia visual y para usos sueltos. En la página se construyen en CSS (ver el brief), porque tienen que crecer con el texto |
+| `note-fold.svg` (34×34) | La esquina doblada. Rellénala con el color de banda de cada nota |
+| `note-link.svg` (64×30) | El enlace a mano que une una nota con la siguiente |
+
+| Nota | Cuerpo | Banda y doblez |
+|---|---|---|
+| Mantequilla | `#FFE380` | `#F7D766` |
+| Agua | `#BFDFE2` | `#A8D1D5` |
+| Rosa | `#F7AFCB` | `#F09DBE` |
+| Brote | `#A8D5A2` | `#95C98E` |
+
+Construcción: contorno de tinta de 1.5px, banda adhesiva de 34px arriba, esquina inferior derecha doblada de 34px. Es la misma construcción que las notas adhesivas de la app (`brand/notes`): si allí la esquina o la banda difieren, iguálalas a las de la app.

@@ -8,9 +8,6 @@ export const es: Dict = {
   },
   nav: {
     label: "Principal",
-    features: "Funciones",
-    pencil: "Prueba el lápiz",
-    why: "Por qué aline",
     install: "Instalar",
   },
   cta: {

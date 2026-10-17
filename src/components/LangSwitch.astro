@@ -4,14 +4,23 @@ import { getT } from "../i18n";
 
 interface Props {
   lang: Lang;
+  /** "hand": escrito a mano en la hoja de libreta del nav. */
+  variant?: "ui" | "hand";
 }
 
-const { lang } = Astro.props;
+const { lang, variant = "ui" } = Astro.props;
 const target = otherLang(lang);
 const t = getT(lang);
 ---
 
-<a class="lang" href={`/${target}/`} hreflang={target} lang={target} data-lang={target} aria-label={t.lang.aria}>
+<a
+  class:list={["lang", `lang--${variant}`]}
+  href={`/${target}/`}
+  hreflang={target}
+  lang={target}
+  data-lang={target}
+  aria-label={t.lang.aria}
+>
   <span class:list={["lang__opt", { "is-active": lang === "en" }]}>EN</span>
   <span class="lang__sep" aria-hidden="true">
     /
@@ -51,6 +60,27 @@ const t = getT(lang);
   .lang__sep {
     color: var(--border-soft);
     font-weight: 600;
+  }
+
+  /* A mano, sobre el renglón de la libreta */
+  .lang--hand {
+    font-family: var(--font-hand);
+    font-size: 21px;
+    font-weight: 400;
+    gap: 6px;
+  }
+
+  .lang--hand .lang__opt.is-active {
+    font-weight: 400;
+    text-decoration: underline;
+    text-decoration-color: #f5c842;
+    text-decoration-thickness: 3px;
+    text-underline-offset: 4px;
+  }
+
+  .lang--hand .lang__sep {
+    color: var(--text-secondary);
+    font-weight: 400;
   }
 
   @media (hover: hover) {

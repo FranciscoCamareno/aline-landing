@@ -7,9 +7,6 @@ export const en: Dict = {
   },
   nav: {
     label: "Main",
-    features: "Features",
-    pencil: "Try the pencil",
-    why: "Why aline",
     install: "Install",
   },
   cta: {

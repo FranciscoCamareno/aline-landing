@@ -1,10 +1,18 @@
 ---
+/*
+ * Nav flotante: dos objetos de papel fijos sobre la página, sin franja.
+ * - Arriba a la izquierda, el logo: el sticker pegado sobre su hoja de respaldo, con "aline" a lápiz debajo.
+ * - Arriba a la derecha, una hoja de libreta con el idioma y los CTAs, que se va con el scroll.
+ */
 import DrawnButton from "./DrawnButton.astro";
 import LangSwitch from "./LangSwitch.astro";
 import Sticker from "./Sticker.astro";
 import alinePencil from "../assets/landing/logo/aline-pencil.svg";
+import backing from "../assets/landing/logo/sticker-backing.svg";
+import notebookEdge from "../assets/landing/nav/notebook-edge.svg";
+import washiYellow from "../assets/landing/doodles/washi-tape-yellow.svg";
 import arrowRaw from "../assets/landing/doodles/arrow-curve-up-left.svg?raw";
-import { APP_URL, INSTALL_URL } from "../config/site";
+import { APP_URL, INSTALL_URL, NAV_PAPER_RETURN } from "../config/site";
 import { getT, type Lang } from "../i18n";
 
 interface Props {
@@ -16,177 +24,345 @@ const t = getT(lang);
 ---
 
 <header class="nav">
-  <div class="container nav__inner">
-    <div class="nav__slot" data-sticker-slot>
-      <Sticker label={t.sticker.aria} />
-      <a class="nav__pencil" href="#top" tabindex="-1" data-sticker-under>
-        <img src={alinePencil.src} width="120" height="44" alt="aline" />
-      </a>
-      <p class="nav__hint hand" aria-hidden="true">
-        <span class="nav__hint-arrow" set:html={arrowRaw} />
-        {t.sticker.hint}
-      </p>
-      <!-- Aplica el estado guardado del sticker antes del primer pintado: sin esto, el aviso y el
-           sticker se ven un instante en la ranura hasta que carga la isla (misma lógica que Sticker.astro) -->
-      <script is:inline>
-        (function () {
-          try {
-            const s = JSON.parse(localStorage.getItem("aline.sticker") || "null");
-            if (!s || !isFinite(s.x) || !isFinite(s.y)) return;
-            const maxX = document.documentElement.clientWidth - 140 + 4 - 8;
-            const maxY = window.innerHeight - 60 + 4 - 8;
-            if (s.x < 4 || s.y < 4 || s.x > maxX || s.y > maxY) return;
-            const slot = document.currentScript.parentElement;
-            const el = slot.querySelector("[data-sticker]");
-            slot.classList.add("is-peeled");
-            el.classList.add("is-loose");
-            el.style.left = s.x + "px";
-            el.style.top = s.y + "px";
-            el.style.transform = "rotate(" + (isFinite(s.rot) ? s.rot : 0) + "deg) scale(1)";
-          } catch {
-            /* sin almacenamiento: se queda en la ranura */
-          }
-        })();
-      </script>
-    </div>
-
-    <nav class="nav__links" aria-label={t.nav.label}>
-      <a href="#features">{t.nav.features}</a>
-      <a href="#pencil">{t.nav.pencil}</a>
-      <a href="#why">{t.nav.why}</a>
-    </nav>
-
-    <div class="nav__actions">
-      <LangSwitch lang={lang} />
-      <DrawnButton class="nav__install" href={INSTALL_URL} variant="secondary">
-        {t.nav.install}
-      </DrawnButton>
-      <DrawnButton href={APP_URL} variant="primary">
-        {t.cta.open}
-      </DrawnButton>
-    </div>
+  <!-- Sin transform ni filter en .logo-dock: el sticker suelto es position: fixed y tiene que
+       resolverse contra el viewport. Solo los hijos van girados. -->
+  <div class="logo-dock" data-sticker-slot>
+    <img class="logo-dock__backing" src={backing.src} width="164" height="80" alt="" />
+    <span class="logo-dock__die" data-sticker-die aria-hidden="true"></span>
+    <a class="logo-dock__pencil" href="#top" tabindex="-1" data-sticker-under>
+      <img src={alinePencil.src} width="120" height="44" alt="aline" />
+    </a>
+    <Sticker label={t.sticker.aria} />
+    <p class="logo-dock__hint hand" aria-hidden="true">
+      <span class="logo-dock__arrow">
+        <span class="logo-dock__arrow-halo" set:html={arrowRaw} />
+        <span set:html={arrowRaw} />
+      </span>
+      {t.sticker.hint}
+    </p>
+    <!-- Aplica el estado guardado del sticker antes del primer pintado: sin esto, el aviso y el
+         sticker se ven un instante en el troquel hasta que carga la isla (misma lógica que Sticker.astro) -->
+    <script is:inline>
+      (function () {
+        try {
+          const s = JSON.parse(localStorage.getItem("aline.sticker") || "null");
+          if (!s || !isFinite(s.x) || !isFinite(s.y)) return;
+          const dock = document.currentScript.parentElement;
+          const el = dock.querySelector("[data-sticker]");
+          const inset = (el.offsetWidth * 4) / 140;
+          const maxX = document.documentElement.clientWidth - el.offsetWidth + inset - 8;
+          const maxY = window.innerHeight - el.offsetHeight + inset - 8;
+          if (s.x < 8 - inset || s.y < 8 - inset || s.x > maxX || s.y > maxY) return;
+          dock.classList.add("is-peeled");
+          el.classList.add("is-loose");
+          el.style.left = s.x + "px";
+          el.style.top = s.y + "px";
+          el.style.transform = "rotate(" + (isFinite(s.rot) ? s.rot : 0) + "deg) scale(1)";
+        } catch {
+          /* sin almacenamiento: se queda en el troquel */
+        }
+      })();
+    </script>
   </div>
+
+  <nav class="paper" aria-label={t.nav.label} data-nav-paper data-return={NAV_PAPER_RETURN}>
+    <img class="paper__edge" src={notebookEdge.src} width="40" height="118" alt="" />
+    <div class="paper__body">
+      <img class="paper__tape" src={washiYellow.src} width="96" height="26" alt="" />
+      <div class="paper__row paper__row--lang">
+        <LangSwitch lang={lang} variant="hand" />
+      </div>
+      <div class="paper__row paper__row--ctas">
+        <DrawnButton class="paper__install" href={INSTALL_URL} variant="secondary">
+          {t.nav.install}
+        </DrawnButton>
+        <DrawnButton href={APP_URL} variant="primary">
+          {t.cta.open}
+        </DrawnButton>
+      </div>
+    </div>
+  </nav>
 </header>
 
+<script>
+  const THRESHOLD = 40;
+  const SCROLL_UP_DELTA = 4;
+
+  const paper = document.querySelector<HTMLElement>("[data-nav-paper]");
+  const dock = document.querySelector<HTMLElement>(".logo-dock");
+  const mode = paper?.dataset.return === "scrollUp" ? "scrollUp" : "top";
+  let lastY = window.scrollY;
+  let ticking = false;
+
+  function update() {
+    ticking = false;
+    const y = window.scrollY;
+    if (paper) {
+      let away = paper.classList.contains("is-away");
+      if (y < THRESHOLD) away = false;
+      else if (mode === "top") away = true;
+      else if (y < lastY - SCROLL_UP_DELTA) away = false;
+      else if (y > lastY + SCROLL_UP_DELTA) away = true;
+      paper.classList.toggle("is-away", away);
+    }
+    // El aviso del sticker también se va al bajar
+    dock?.classList.toggle("is-scrolled", y > THRESHOLD);
+    if (Math.abs(y - lastY) > SCROLL_UP_DELTA || y < THRESHOLD) lastY = y;
+  }
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    },
+    { passive: true },
+  );
+  update();
+</script>
+
 <style>
-  /* Sin backdrop-filter, transform ni filter aquí: romperían el position: fixed del sticker */
-  .nav {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    height: 76px;
-    background: var(--bg-canvas);
-    border-bottom: 1.5px solid var(--border-soft);
+  /* ── Logo: sticker sobre su hoja de respaldo ───────────────────────────── */
+  .logo-dock {
+    --k: 1;
+    position: fixed;
+    left: 20px;
+    top: 16px;
+    z-index: 101;
+    width: calc(164px * var(--k));
+    height: calc(80px * var(--k));
   }
 
-  .nav__inner {
-    display: flex;
-    align-items: center;
-    gap: 32px;
-    height: 100%;
+  .logo-dock__backing,
+  .logo-dock__die,
+  .logo-dock__pencil {
+    position: absolute;
+    transform: rotate(-2deg);
   }
 
-  .nav__slot {
-    position: relative;
-    flex: none;
-    width: 132px;
-    height: 52px;
-  }
-
-  .nav__pencil {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .logo-dock__backing {
+    inset: 0;
     width: 100%;
     height: 100%;
+    border-radius: calc(14px * var(--k));
+    box-shadow:
+      0 1px 0 rgba(80, 55, 20, 0.12),
+      0 10px 22px rgba(60, 40, 10, 0.24);
+  }
+
+  /* El troquel punteado: mismo centro que la hoja, así el giro de cada pieza coincide */
+  .logo-dock__die {
+    left: calc(15px * var(--k));
+    top: calc(13px * var(--k));
+    width: calc(134px * var(--k));
+    height: calc(54px * var(--k));
+    pointer-events: none;
+  }
+
+  .logo-dock__pencil {
+    left: calc(22px * var(--k));
+    top: calc(18px * var(--k));
+    display: flex;
+    width: calc(120px * var(--k));
+    height: calc(44px * var(--k));
     border-radius: var(--radius-sm);
   }
 
-  .nav__pencil img {
-    width: 120px;
-    height: 44px;
+  .logo-dock__pencil img {
+    width: 100%;
+    height: 100%;
   }
 
-  .nav__hint {
+  .logo-dock__hint {
     position: absolute;
-    top: calc(100% + 14px);
-    left: 70px;
+    left: calc(78px * var(--k));
+    top: calc(84px * var(--k));
     display: flex;
     align-items: flex-start;
     gap: 2px;
     margin: 0;
-    padding: 4px 10px 4px 4px;
-    /* Cae sobre el escritorio pintado: un trozo de papel mantiene el contraste */
-    background: var(--bg-canvas);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-sticker);
     color: var(--text-accent);
     font-size: 19px;
     line-height: 1;
     white-space: nowrap;
     pointer-events: none;
+    /* Cae sobre el arte pintado: halo de papel */
+    text-shadow:
+      0 0 2px #fffdf4,
+      0 0 4px #fffdf4,
+      0 0 7px #fffdf4,
+      0 0 12px #fffdf4;
     transform: rotate(-3deg);
+    transition: opacity 200ms var(--ease-out);
   }
 
-  .nav__hint-arrow {
+  .logo-dock__arrow {
+    position: relative;
     display: block;
     width: 34px;
     height: 30px;
     margin-top: -18px;
   }
 
-  .nav__slot.is-peeled .nav__hint {
-    display: none;
+  .logo-dock__arrow > span {
+    position: absolute;
+    inset: 0;
   }
 
-  .nav__links {
+  .logo-dock__arrow :global(svg) {
+    overflow: visible;
+  }
+
+  /* Debajo de la flecha, el mismo trazo en papel a 6px */
+  .logo-dock__arrow-halo :global(path) {
+    stroke: #fffdf4;
+    stroke-width: 6px;
+  }
+
+  .logo-dock.is-peeled .logo-dock__hint,
+  .logo-dock.is-scrolled .logo-dock__hint {
+    opacity: 0;
+  }
+
+  /* ── Hoja de libreta ──────────────────────────────────────────────────── */
+  .paper {
+    position: fixed;
+    right: 22px;
+    top: 18px;
+    z-index: 100;
     display: flex;
-    gap: 8px;
+    /* La sombra sigue el borde arrancado; aquí el filter no rompe nada: no hay hijos fixed */
+    filter: drop-shadow(0 1px 0 rgba(80, 55, 20, 0.12)) drop-shadow(0 10px 14px rgba(60, 40, 10, 0.24));
+    transform: rotate(1.5deg);
+    transform-origin: 70% 0;
+    transition:
+      transform 550ms cubic-bezier(0.2, 1.2, 0.4, 1),
+      opacity 550ms cubic-bezier(0.2, 1.2, 0.4, 1),
+      visibility 0s 0s;
   }
 
-  .nav__links a {
-    display: inline-flex;
+  /* Se va al bajar, como si la arrancaran; oculta de verdad para que Tab no llegue a sus botones */
+  .paper.is-away {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-160%) rotate(-5deg);
+    transition:
+      transform 500ms cubic-bezier(0.5, 0, 0.75, 0),
+      opacity 500ms cubic-bezier(0.5, 0, 0.75, 0),
+      visibility 0s 500ms;
+  }
+
+  .paper__edge {
+    flex: none;
+    width: 40px;
+    height: 118px;
+    margin-right: -1px;
+  }
+
+  .paper__body {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    height: 118px;
+    padding: 12px 22px 0 8px;
+    border-radius: 0 16px 6px 0;
+    background-color: #fbf7ea;
+    /* Renglones de 1px a 48px y 108px del borde superior */
+    background-image: linear-gradient(#c9d3d3, #c9d3d3), linear-gradient(#c9d3d3, #c9d3d3);
+    background-size:
+      100% 1px,
+      100% 1px;
+    background-position:
+      0 48px,
+      0 108px;
+    background-repeat: no-repeat;
+  }
+
+  .paper__tape {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    width: 96px;
+    height: 26px;
+    transform: translateX(-50%) rotate(-4deg);
+    pointer-events: none;
+  }
+
+  /* Renglón 1: el idioma escrito sobre la línea de 48px */
+  .paper__row--lang {
+    height: 36px;
+    display: flex;
+    align-items: flex-end;
+  }
+
+  .paper__row--lang :global(.lang) {
+    margin-bottom: -6px;
+  }
+
+  /* Renglón 2: los CTAs entre las dos líneas */
+  .paper__row--ctas {
+    display: flex;
     align-items: center;
-    min-height: 44px;
-    padding: 0 10px;
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
-    font-weight: 700;
-    font-size: 16px;
-    text-decoration: none;
+    gap: 12px;
+    height: 60px;
+    margin-top: 0;
+    padding-top: 2px;
   }
 
-  @media (hover: hover) {
-    .nav__links a:hover {
-      background: var(--selection-soft);
+  @media (prefers-reduced-motion: reduce) {
+    .paper,
+    .paper.is-away {
+      transform: rotate(1.5deg);
+      transition:
+        opacity 150ms linear,
+        visibility 0s 150ms;
     }
-  }
 
-  .nav__actions {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-left: auto;
-  }
-
-  @media (max-width: 959.98px) {
-    .nav__links {
-      display: none;
+    .paper:not(.is-away) {
+      transition:
+        opacity 150ms linear,
+        visibility 0s 0s;
     }
   }
 
   @media (max-width: 599.98px) {
-    .nav__inner {
-      padding-inline: 16px;
-      gap: 12px;
+    .logo-dock {
+      left: 12px;
+      top: 12px;
     }
 
-    .nav__actions {
-      gap: 6px;
+    .paper {
+      right: 12px;
+      top: 14px;
     }
 
-    .nav__actions :global(.nav__install) {
+    .paper__row--ctas :global(.paper__install) {
       display: none;
+    }
+
+    .paper__body {
+      padding-right: 16px;
+    }
+
+    /* En dos líneas, para no meterse bajo la hoja de libreta */
+    .logo-dock__hint {
+      max-width: 96px;
+      white-space: normal;
+      line-height: 1.05;
+    }
+  }
+
+  /* El logo completo (164px) y la hoja chocan: el logo se reduce cambiando tamaños, no con transform */
+  @media (max-width: 399.98px) {
+    .logo-dock {
+      --k: 0.85;
+    }
+
+    .logo-dock__hint {
+      font-size: 17px;
     }
   }
 </style>
