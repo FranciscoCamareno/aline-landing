@@ -105,7 +105,10 @@ export const es: Dict = {
       title: "Compatible con Excalidraw.",
       body: "Trae tus archivos .excalidraw y llévatelos cuando quieras.",
     },
-    languages: { title: "English y español.", body: "Toda la app sigue tu idioma." },
+    openSource: {
+      title: "Open source.",
+      body: "El código de aline es libre (AGPLv3): puedes leerlo, estudiarlo y mejorarlo.",
+    },
   },
   pages: pagesEs,
   footer: {

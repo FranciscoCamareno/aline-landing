@@ -77,7 +77,7 @@ export interface Dict {
     markdown: Fact;
     local: Fact;
     excalidraw: Fact;
-    languages: Fact;
+    openSource: Fact;
   };
   pages: PagesCopy;
   footer: {

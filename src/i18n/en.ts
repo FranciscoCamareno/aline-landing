@@ -101,7 +101,10 @@ export const en: Dict = {
     markdown: { title: "Plain Markdown.", body: "Your notes are .md files. Open them in anything, forever." },
     local: { title: "Local first.", body: "Works offline and syncs through your own Google Drive." },
     excalidraw: { title: "Excalidraw friendly.", body: "Bring your .excalidraw files in, take them back out." },
-    languages: { title: "English y español.", body: "The whole app follows your language." },
+    openSource: {
+      title: "Open source.",
+      body: "aline’s code is free under the AGPLv3: read it, study it and improve it.",
+    },
   },
   pages: pagesEn,
   footer: {

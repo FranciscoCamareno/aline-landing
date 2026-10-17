@@ -34,7 +34,7 @@ export const PRIVACY_URL = "/privacy/";
 // "instagram" a la lista `socials` de src/components/Footer.astro.
 export const INSTAGRAM_URL = "#";
 export const LINKEDIN_URL = "https://www.linkedin.com/in/franciscocamareno/";
-export const GITHUB_URL = "#";
+export const GITHUB_URL = "https://github.com/FranciscoCamareno/aline";
 
 /** Fecha de la última revisión de los textos legales (Términos y Privacidad), en ISO. */
 export const LEGAL_UPDATED = "2026-10-17";

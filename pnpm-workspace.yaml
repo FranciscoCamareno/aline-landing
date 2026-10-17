@@ -4,3 +4,7 @@ allowBuilds:
   workerd: true
 minimumReleaseAgeExclude:
   - eslint@10.13.0
+# satori fija fflate 0.7.3, que tiene un aviso de seguridad (bucle infinito con ZIP64 mal formado,
+# GHSA-px8p-9vwx-vf98). satori solo se usa al compilar la imagen de redes; se fuerza una versión corregida.
+overrides:
+  fflate: 0.8.3

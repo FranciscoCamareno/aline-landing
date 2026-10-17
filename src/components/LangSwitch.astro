@@ -34,7 +34,9 @@ const t = getT(lang);
   const ONE_YEAR = 60 * 60 * 24 * 365;
   for (const link of document.querySelectorAll<HTMLAnchorElement>("a.lang[data-lang]")) {
     link.addEventListener("click", () => {
-      document.cookie = `lang=${link.dataset.lang}; Max-Age=${ONE_YEAR}; Path=/; SameSite=Lax`;
+      // Secure solo en https: en http local (pnpm dev) el navegador descartaría la cookie
+      const secure = location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `lang=${link.dataset.lang}; Max-Age=${ONE_YEAR}; Path=/; SameSite=Lax${secure}`;
     });
   }
 </script>
