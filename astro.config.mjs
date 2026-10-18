@@ -1,8 +1,9 @@
 // @ts-check
 import { defineConfig } from "astro/config";
-import sitemap from "@astrojs/sitemap";
+import { SITE_URL } from "./src/config/site.ts";
 
-const site = "https://aline.app";
+// El dominio vive en src/config/site.ts (SITE_URL): canonical, hreflang, Open Graph, sitemap y robots.
+const site = SITE_URL;
 
 export default defineConfig({
   site,
@@ -13,7 +14,7 @@ export default defineConfig({
     locales: ["en", "es"],
     routing: {
       prefixDefaultLocale: true,
-      // La raíz la resuelven functions/_middleware.ts y src/pages/index.astro
+      // La raíz la resuelven worker/index.ts y src/pages/index.astro
       redirectToDefaultLocale: false,
     },
   },
@@ -25,13 +26,4 @@ export default defineConfig({
       include: ["gsap", "gsap/ScrollTrigger", "gsap/DrawSVGPlugin", "perfect-freehand"],
     },
   },
-  integrations: [
-    sitemap({
-      // /en/ y /es/ enlazadas entre sí con hreflang. Las páginas en blanco (noindex) quedan fuera:
-      // quita su slug de esta lista cuando tengan diseño y contenido propios.
-      filter: (page) =>
-        page !== `${site}/` && !["install", "about", "terms", "privacy"].some((p) => page.includes(`/${p}/`)),
-      i18n: { defaultLocale: "en", locales: { en: "en", es: "es" } },
-    }),
-  ],
 });

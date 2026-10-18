@@ -6,7 +6,7 @@
 import Base from "../layouts/Base.astro";
 import Nav from "./Nav.astro";
 import Footer from "./Footer.astro";
-import type { PageSlug } from "../config/site";
+import { NOINDEX_SLUGS, type PageSlug } from "../config/site";
 import type { Lang } from "../i18n";
 
 interface Props {
@@ -20,7 +20,7 @@ const { lang, slug, title, description } = Astro.props;
 const path = `${slug}/`;
 ---
 
-<Base lang={lang} {path} title={`${title} — aline`} {description} noindex thread={false}>
+<Base lang={lang} {path} title={`${title} — aline`} {description} noindex={NOINDEX_SLUGS.includes(slug)} thread={false}>
   <Nav lang={lang} {path} />
   <main class="shell">
     <div class="container">

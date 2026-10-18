@@ -8,6 +8,9 @@ export const APP_URL = "https://app.aline.website/";
  */
 export const INSTALL_URL = "/install/";
 
+/** Páginas internas que no se indexan todavía (meta noindex y fuera del sitemap). Quita un slug cuando esté lista. */
+export const NOINDEX_SLUGS: readonly PageSlug[] = ["install", "about", "terms", "privacy"];
+
 /** Páginas internas que existen (/{idioma}/{slug}/). Mientras no tengan diseño propio se muestran en blanco. */
 export const PAGE_SLUGS = ["install", "about", "terms", "privacy"] as const;
 export type PageSlug = (typeof PAGE_SLUGS)[number];
@@ -40,4 +43,4 @@ export const GITHUB_URL = "https://github.com/FranciscoCamareno/aline";
 export const LEGAL_UPDATED = "2026-10-17";
 
 /** Dominio público, para canonical y hreflang. */
-export const SITE_URL = "https://aline.app";
+export const SITE_URL = "https://aline.website";

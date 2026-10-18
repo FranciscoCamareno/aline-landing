@@ -4,6 +4,7 @@
  * mismo criterio que functions/_middleware.ts, pero con navigator.languages.
  */
 import "../styles/global.css";
+import Icons from "../components/Icons.astro";
 import { SITE_URL } from "../config/site";
 ---
 
@@ -13,6 +14,7 @@ import { SITE_URL } from "../config/site";
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>aline</title>
+    <Icons />
     <link rel="canonical" href={new URL("/en/", SITE_URL).href} />
     <link rel="alternate" hreflang="en" href={new URL("/en/", SITE_URL).href} />
     <link rel="alternate" hreflang="es" href={new URL("/es/", SITE_URL).href} />

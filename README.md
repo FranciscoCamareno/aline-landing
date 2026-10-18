@@ -11,7 +11,7 @@ pnpm check        # astro check + tipos del middleware
 pnpm lint
 pnpm build        # salida en dist/ (incluye las imágenes Open Graph y el sitemap)
 pnpm preview:worker   # build + wrangler dev: prueba el Worker de idioma en / y las cabeceras
-node scripts/favicons.mjs   # regenera favicon-32.png y apple-touch-icon.png
+node scripts/favicons.mjs   # regenera favicon.ico, favicon-48x48/192x192.png y apple-touch-icon.png desde sticker-a-512.png
 ```
 
 Con `pnpm dev`, la raíz `/` usa el fallback en cliente (`src/pages/index.astro`). El Worker de idioma solo corre con Wrangler (`pnpm preview:worker`) o en Cloudflare.
@@ -67,10 +67,11 @@ El trazo lo dicta el scroll en todo momento: si el scroll se para, el lápiz se 
 - `src/components/ProductPeek.astro`: vista previa de la app en HTML (`role="img"`). Por debajo de 960px hace scroll horizontal.
 - `src/components/Features.astro`, `Facts.astro`, `FinalCta.astro`: el resto de secciones.
 - `src/components/Footer.astro`: footer oscuro (tokens `--dark-*`), con el logotipo gigante cortado por el borde y el sticker de la "a" despegable.
-- `src/components/PageShell.astro`, `DocPage.astro`, `InstallPage.astro` + `src/pages/[lang]/[slug].astro`: páginas interiores `/{idioma}/install/`, `about`, `terms` y `privacy` (mismo slug en los dos idiomas). Llevan nav y footer, `noindex` y no están en el sitemap: cuando estén listas para publicarse, quita su slug de `filter` en `astro.config.mjs`. Todo el texto está en `src/i18n/pages-es.ts` y `pages-en.ts`; la fecha de "Última actualización" es `LEGAL_UPDATED` en `src/config/site.ts`. **Los textos legales son un borrador** redactado a partir de la documentación del sistema: que los revise una persona con formación jurídica antes de publicarlos. Instalar muestra una ilustración por navegador (`src/assets/landing/install/`) y elige la pestaña según el dispositivo.
+- `src/components/PageShell.astro`, `DocPage.astro`, `InstallPage.astro` + `src/pages/[lang]/[slug].astro`: páginas interiores `/{idioma}/install/`, `about`, `terms` y `privacy` (mismo slug en los dos idiomas). Llevan nav y footer, `noindex` y no están en el sitemap: cuando estén listas para publicarse, quita su slug de `NOINDEX_SLUGS` en `src/config/site.ts` (esa lista alimenta tanto la etiqueta `noindex` como el sitemap). Todo el texto está en `src/i18n/pages-es.ts` y `pages-en.ts`; la fecha de "Última actualización" es `LEGAL_UPDATED` en `src/config/site.ts`. **Los textos legales son un borrador** redactado a partir de la documentación del sistema: que los revise una persona con formación jurídica antes de publicarlos. Instalar muestra una ilustración por navegador (`src/assets/landing/install/`) y elige la pestaña según el dispositivo.
 - `src/components/Sticker.astro`: sticker despegable reutilizable (lo usan el logo del nav y la "a" del footer). Opciones: imágenes en reposo y al arrastrar, giro, clave de `localStorage`, margen transparente y acción al hacer clic. Al despegarlo pasa a `<body>` y queda anclado a la página (se va con el scroll; arrastrar cerca del borde de la ventana desplaza la página). Con doble clic o Escape vuela al centro del `[data-sticker-die]` de su `[data-sticker-slot]`.
 - `src/components/DrawingPad.astro`: bloc de dibujo con dos canvas (resaltador con `multiply` debajo, lápiz encima) y trazos guardados como datos. `perfect-freehand` se carga al acercarse. Con puntero grueso arranca bloqueado ("Toca para dibujar").
 - `src/components/PencilThread.astro`: el hilo de lápiz. La ruta se calcula en JS a partir de las anclas; GSAP (ScrollTrigger + DrawSVG) se carga al acercarse. No se muestra por debajo de 960px.
 - `src/components/DrawnButton.astro`, `Nav.astro`, `LangSwitch.astro`: botón dibujado, nav flotante y cambio de idioma.
 - `src/pages/og/[lang].png.ts`: imagen Open Graph de 1200×630 por idioma, generada en el build con Satori + resvg (fuentes TTF en `src/assets/og-fonts/`).
-- `public/`: fuentes autoalojadas, favicons y `robots.txt`. El sitemap lo genera `@astrojs/sitemap`.
+- `public/`: fuentes autoalojadas e iconos (`favicon.ico`, `favicon-48x48.png`, `favicon-192x192.png`, `apple-touch-icon.png`, generados con `scripts/favicons.mjs`; el `<head>` los enlaza desde `src/components/Icons.astro`).
+- `src/pages/sitemap.xml.ts` y `src/pages/robots.txt.ts`: `/sitemap.xml` (páginas indexables con sus alternativas hreflang) y `/robots.txt`. Ambos usan `SITE_URL` de `src/config/site.ts`, que es **el único sitio donde se cambia el dominio** (también lo leen `astro.config.mjs`, el canonical, hreflang y las imágenes Open Graph).

@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import Icons from "../components/Icons.astro";
 import PencilThread from "../components/PencilThread.astro";
 import { SITE_URL } from "../config/site";
 import { LANGS, getT, type Lang } from "../i18n";
@@ -38,10 +39,8 @@ const ogImage = new URL(`/og/${lang}.png`, SITE_URL).href;
       <link rel="alternate" hreflang={l} href={new URL(`/${l}/${path}`, SITE_URL).href} />
     ))}
     <link rel="alternate" hreflang="x-default" href={new URL(path ? `/en/${path}` : "/", SITE_URL).href} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="sitemap" href="/sitemap-index.xml" />
+    <Icons />
+    <link rel="sitemap" href="/sitemap.xml" />
     <!-- Solo las fuentes del hero: Nunito 900 (variable) y Excalifont -->
     <link rel="preload" href="/fonts/nunito-latin-var.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/excalifont-latin.woff2" as="font" type="font/woff2" crossorigin />

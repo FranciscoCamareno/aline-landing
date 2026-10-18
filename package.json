@@ -19,7 +19,6 @@
     "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
-    "@astrojs/sitemap": "^3.7.4",
     "astro": "^7.4.0",
     "gsap": "^3.15.0",
     "perfect-freehand": "^1.2.3"
@@ -33,6 +32,7 @@
     "prettier": "^3.9.10",
     "prettier-plugin-astro": "^1.1.1",
     "satori": "^0.61.0",
+    "sharp": "^0.35.5",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.71.2",
     "wrangler": "~4.151.0"
