@@ -330,7 +330,9 @@ const STRIKE =
    * y nunca menos que el ancho de la ventana. La sección recorta alrededor de la hoja.
    */
   .hero {
-    z-index: 1;
+    /* Encima del lapicito del hilo (z-index 50) y debajo del nav (100): el lápiz espera escondido
+       tras el hero y solo asoma por su borde inferior al empezar a bajar */
+    z-index: 60;
     --paper: min(92vw, var(--sheet-max), calc((100svh - 140px) * 0.75));
     --sw: max(100vw, calc(var(--paper) / var(--sheet-w)));
     --sh: calc(var(--sw) / var(--bg-ar));

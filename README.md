@@ -27,6 +27,7 @@ El proyecto es un Worker (no Pages) y se despliega con `npx wrangler deploy`, qu
 - Versión de pnpm: la fija `packageManager` en `package.json` (Cloudflare usaría la 9.10 por defecto y no instalaría). Si algún día ignora ese campo, define `PNPM_VERSION` en las variables de entorno del proyecto.
 - `worker/index.ts` es el único código que se ejecuta en el servidor: redirige `/` a `/en/` o `/es/` (cookie `lang`, luego `Accept-Language`; los rastreadores reciben `/en/`). El resto lo sirve Cloudflare directamente desde `dist/`.
 - `public/_headers` aplica las cabeceras de seguridad (CSP, nosniff, X-Frame-Options…) y la caché larga de `/_astro/*`.
+- `public/_redirects` manda con 301 las URLs de la web anterior que Google aún recuerda (p. ej. `/politics.html`).
 - **No quites `wrangler.jsonc`**: sin él, wrangler intenta autoconfigurar el proyecto (instala el adaptador de Astro para Cloudflare), vuelve a compilar y falla con el módulo nativo de `resvg`.
 
 ## Dónde se cambia cada cosa

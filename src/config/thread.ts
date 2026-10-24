@@ -17,7 +17,8 @@ export const threadConfig = {
    * (con +40 / −30 la curva empezaba a cruzar antes de salir del contenido).
    */
   offsets: {
-    start: 2,
+    /** Negativo: el hilo arranca por dentro del hero, así ni la punta del lápiz se ve antes de bajar. */
+    start: -14,
     sideTop: -8,
     sideBottom: 8,
     waysBottom: 8,
